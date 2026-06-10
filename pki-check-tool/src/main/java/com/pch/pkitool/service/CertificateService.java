@@ -3,9 +3,19 @@ package com.pch.pkitool.service;
 import com.pch.pkitool.dto.CertificateInfoResponse;
 import com.pch.pkitool.util.CertificateUtil;
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.Security;
+import java.security.SignatureException;
 import java.security.cert.CRLException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
@@ -27,10 +37,10 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class CertificateService {
 
-    @Autowired // kết nối và inject xử lý CRL
+    @Autowired
     private CRLService crlService;
 
-    @Autowired // kết nối và inject truy vấn trực tuyến OCSP
+    @Autowired
     private OCSPService ocspService;
 
     // Nạp BoucyCastle để xử lý các hàm mã hóa nâng cao trong OCSP
@@ -49,10 +59,6 @@ public class CertificateService {
         byte[] userBytes = userFile.getBytes();
         X509Certificate cert = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(userBytes));
 
-        // Chuyển đổi file caiFile thành 1 mảng dữ liệu byte thuần
-        byte[] caBytes = caFile.getBytes();
-        X509Certificate caCert = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(caBytes));
-
         // Khởi tạo đối tượng response để làm thùng chứa dữ liệu phản hồi cuối cùng
         CertificateInfoResponse dto = new CertificateInfoResponse();
         dto.setSubject(cert.getSubjectX500Principal().toString());
@@ -65,10 +71,41 @@ public class CertificateService {
         String provider = CertificateUtil.detectCAProvider(dto.getIssuer());
         dto.setCaProvider(provider);
 
+        X509Certificate finalCaCert = null;
+
+        // FALLBACK LOGIC: If manual CA is uploaded, use it immediately
+        if (caFile != null && !caFile.isEmpty()) {
+            byte[] caBytes = caFile.getBytes();
+            finalCaCert = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(caBytes));
+        } else {
+            // Automatically search inside internal TrustStore folder
+            String caFileName = "TrustStore/" + provider.toUpperCase() + ".cer";
+            File localCaFile = new File(caFileName);
+
+            if (!localCaFile.exists()) {
+                dto.setCaValidityStatus("NOT_FOUND_IN_TRUSTSTORE");
+                return dto;
+            }
+            try (FileInputStream fis = new FileInputStream(localCaFile)) {
+                finalCaCert = (X509Certificate) cf.generateCertificate(fis);
+            }
+        }
+
         // Gọi dịch vụ kiểm tra trạng thái qua CRL và OCSP
         Date now = new Date();
 
-        // LAYER 4: Kiểm tra thời hạn hiệu lực chứng chỉ người dùng (Lỗi Log 2, 3, 4)
+        // Kiểm tra toán học xem CA này có đúng là người ký ra User Cert không
+        try {
+            cert.verify(finalCaCert.getPublicKey());
+        } catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException | CertificateException e) {
+            // Nếu sai chữ ký số 
+            dto.setCaValidityStatus("MISMATCHED_CA_CHAIN");
+            dto.setCrlStatus("SIGNATURE_VERIFICATION_FAILED");
+            dto.setOcspStatus("SIGNATURE_VERIFICATION_FAILED");
+            return dto; // Chặn đứng luồng xử lý tại đây
+        }
+
+        // Kiểm tra thời hạn hiệu lực chứng chỉ người dùng 
         try {
             cert.checkValidity(now);
             dto.setCertValidityStatus("VALID");
@@ -76,18 +113,51 @@ public class CertificateService {
             dto.setCertValidityStatus("EXPIRED");
         }
 
-        // LAYER 5: Kiểm tra thời hạn hiệu lực chứng chỉ CA cấp phát (Lỗi Log 3, 4)
+        // Kiểm tra thời hạn hiệu lực chứng chỉ CA cấp phát 
         try {
-            caCert.checkValidity(now);
+            finalCaCert.checkValidity(now);
             dto.setCaValidityStatus("VALID");
         } catch (CertificateExpiredException | CertificateNotYetValidException e) {
-            dto.setCaValidityStatus("EXPIRED");
+            dto.setCaValidityStatus("EXPIRED"); // Báo EXPIRED để WinForms kích hoạt luồng dự phòng
         }
 
         // Run validation services
-        dto.setCrlStatus(crlService.checkCRL(cert, caCert, cf, dto));
-        dto.setOcspStatus(ocspService.checkOCSP(cert, caCert));
+        dto.setCrlStatus(crlService.checkCRL(cert, finalCaCert, cf, dto));
+        dto.setOcspStatus(ocspService.checkOCSP(cert, finalCaCert));
 
         return dto;
+    }
+
+    public String saveCaToTrustStore(MultipartFile caFile) throws Exception {
+        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+        byte[] caBytes = caFile.getBytes();
+
+        // Read the binary layout of the uploaded CA certificate
+        X509Certificate caCert = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(caBytes));
+
+        // Extract the Subject DN instead of Issuer DN
+        String subjectDN = caCert.getSubjectX500Principal().getName();
+
+        // Reuse our keyword parser tool to extract short neat name (e.g. FPT, VNPT)
+        String caProviderKey = CertificateUtil.detectCAProvider(subjectDN);
+
+        if ("UNKNOWN_CA".equals(caProviderKey)) {
+            // Fallback to a sanitized CN name if it is a completely new provider
+            caProviderKey = "NEW_" + caCert.getSerialNumber().toString(16).toUpperCase();
+        }
+
+        // Ensure the internal TrustStore directory exists locally
+        Path trustStoreFolder = Paths.get("TrustStore");
+        if (!Files.exists(trustStoreFolder)) {
+            Files.createDirectories(trustStoreFolder);
+        }
+
+        // Establish permanent destination path: TrustStore/PROVIDER.cer
+        Path targetPath = trustStoreFolder.resolve(caProviderKey.toUpperCase() + ".cer");
+
+        // Save or overwrite bytes onto local storage disk stream safely
+        Files.copy(new ByteArrayInputStream(caBytes), targetPath, StandardCopyOption.REPLACE_EXISTING);
+
+        return caProviderKey; // Return the string key to C# for visualization
     }
 }

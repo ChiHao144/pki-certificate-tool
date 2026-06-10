@@ -9,24 +9,43 @@ public class CertificateUtil {
     // Lấy thông tin nhà cung cấp bằng BouncyCastle
     public static String detectCAProvider(String issuerDN) {
         try {
-            // Chuyển chuỗi chữ DN thông thường thành đối tượng cấu trúc X500Name của BouncyCastle
             X500Name x500Name = new X500Name(issuerDN);
-            
-            // Tìm và lọc ra danh sách các mảng chứa thuộc tính "O" (Organization - Tổ chức) trong chuỗi
+            String rawProvider = "";
+
+            // Extract Organization attribute from issuer string
             var orgs = x500Name.getRDNs(BCStyle.O);
-            if (orgs.length > 0) { // Kiểm tra nếu chuỗi DN thực sự có tồn tại trường O
-                // Bóc tách giá trị nhị phân ASN1 bên trong trường O và biến đổi thành chuỗi chữ thường
-                return IETFUtils.valueToString(orgs[0].getFirst().getValue());
+            if (orgs.length > 0) {
+                rawProvider = IETFUtils.valueToString(orgs[0].getFirst().getValue()).toUpperCase();
+            } else {
+                var cns = x500Name.getRDNs(BCStyle.CN);
+                if (cns.length > 0) {
+                    rawProvider = IETFUtils.valueToString(cns[0].getFirst().getValue()).toUpperCase();
+                }
             }
-            
-            // Dự phòng: Nếu không có trường O thì lấy trường CN (Common Name)
-            var cns = x500Name.getRDNs(BCStyle.CN);
-            if (cns.length > 0) {
-                return IETFUtils.valueToString(cns[0].getFirst().getValue());
+
+            // Map long organization text to short uppercase file keys
+            if (rawProvider.contains("NACENCOMM") || rawProvider.contains("CA2"))  {
+                return "CA2";
             }
+            if (rawProvider.contains("POSTS AND TELECOMMUNICATIONS") || rawProvider.contains("VNPT")) {
+                return "VNPT";
+            }
+            if (rawProvider.contains("FPT")) {
+                return "FPT";
+            }
+            if (rawProvider.contains("FASTCA")) {
+                return "FASTCA";
+            }
+            if (rawProvider.contains("CMC")) {
+                return "CMC";
+            }
+            if (rawProvider.contains("VIETTEL")) {
+                return "VIETTEL";
+            }
+           
+            return "UNKNOWN_CA";
         } catch (Exception e) {
-            return "UNKNOWN CA (BC ERROR)";
+            return "UNKNOWN_CA";
         }
-        return "UNKNOWN CA";
     }
 }

@@ -52,7 +52,7 @@ public class CRLService {
 
                 Date now = new Date();
 
-                // LAYER 1: Kiểm tra thời hạn hiệu lực của chính tệp CRL (Lỗi Log 4)
+                // Kiểm tra thời hạn hiệu lực của chính tệp CRL 
                 if (crl.getNextUpdate() != null && now.after(crl.getNextUpdate())) {
                     dto.setCrlValidityStatus("EXPIRED");
                     return "CRL_EXPIRED";
@@ -60,14 +60,14 @@ public class CRLService {
                     dto.setCrlValidityStatus("VALID");
                 }
 
-                // LAYER 2: Xác thực chữ ký số của tệp CRL bằng khóa công khai của CA
+                // Xác thực chữ ký số của tệp CRL bằng khóa công khai của CA
                 try {
                     crl.verify(caCert.getPublicKey());
                 } catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException | CRLException e) {
                     return "INVALID_CRL_SIGNATURE";
                 }
 
-                // LAYER 3: Đối chiếu số Serial xem có bị thu hồi không
+                // Đối chiếu số Serial xem có bị thu hồi không
                 if (crl.isRevoked(cert)) {
                     return "REVOKED";
                 }

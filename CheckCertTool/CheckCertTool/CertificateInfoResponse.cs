@@ -16,5 +16,8 @@ namespace CheckCertTool
         public string crlStatus { get; set; }
         public string ocspStatus { get; set; }
         public string caProvider { get; set; }
+        public string caValidityStatus { get; set; }
+        public string certValidityStatus { get; set; }
+        public string crlValidityStatus { get; set; }
     }
 }

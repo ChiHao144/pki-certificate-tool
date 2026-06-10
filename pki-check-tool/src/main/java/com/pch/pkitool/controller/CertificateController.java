@@ -9,6 +9,8 @@ import java.security.cert.CertificateException;
 import org.bouncycastle.cert.ocsp.OCSPException;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,10 +30,21 @@ public class CertificateController {
     @Autowired // Kích hoạt cơ chế injection
     private CertificateService certificateService; // Khai báo biến đại diện ở tầng nghiệp vụ
 
-    @PostMapping("/info") // Hàm bên dưới có phương thức POST với đường dẫn /info
+    @PostMapping("/info") // User bây giờ chỉ cần upload userFile
     public CertificateInfoResponse getCertificateInfoResponse(@RequestParam("userFile") MultipartFile userFile,
-            @RequestParam("caFile") MultipartFile caFile) throws CertificateException, IOException, FileNotFoundException, CRLException, OperatorCreationException, OCSPException {
+            @RequestParam(value = "caFile", required = false) MultipartFile caFile) throws CertificateException, IOException, FileNotFoundException, CRLException, OperatorCreationException, OCSPException {
         // Gọi tần service xử lý trả dữ liệu về cho client
-        return certificateService.readCertificate(userFile, caFile); 
+        return certificateService.readCertificate(userFile, caFile);
+    }
+
+    @PostMapping("/upload-ca")
+    public ResponseEntity<String> uploadCaFile(@RequestParam("caFile") MultipartFile caFile) {
+        try {
+            String caName = certificateService.saveCaToTrustStore(caFile);
+            return ResponseEntity.ok(caName);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(e.getMessage());
+        }
     }
 }

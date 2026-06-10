@@ -3,3 +3,4 @@ target/
 .vs/
 bin/
 obj/
+interface-pki-check-tool/

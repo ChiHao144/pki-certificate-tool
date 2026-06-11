@@ -4,3 +4,5 @@ target/
 bin/
 obj/
 interface-pki-check-tool/
+*.cer/
+*.crt/

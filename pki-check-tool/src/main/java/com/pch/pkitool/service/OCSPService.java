@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import static java.lang.System.in;
 import static java.lang.System.out;
 import java.net.HttpURLConnection;
 import java.net.URL;

@@ -47,10 +47,10 @@
             // btnCheck
             // 
             this.btnCheck.Font = new System.Drawing.Font("Microsoft Sans Serif", 10.2F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnCheck.Location = new System.Drawing.Point(442, 79);
+            this.btnCheck.Location = new System.Drawing.Point(282, 79);
             this.btnCheck.Name = "btnCheck";
             this.btnCheck.Size = new System.Drawing.Size(217, 56);
-            this.btnCheck.TabIndex = 2;
+            this.btnCheck.TabIndex = 1;
             this.btnCheck.Text = "Kiểm tra";
             this.btnCheck.UseVisualStyleBackColor = true;
             this.btnCheck.Click += new System.EventHandler(this.btnCheck_Click);
@@ -171,12 +171,12 @@
             // 
             // btnAddNewCa
             // 
-            this.btnAddNewCa.BackColor = System.Drawing.SystemColors.Info;
+            this.btnAddNewCa.BackColor = System.Drawing.Color.LightSkyBlue;
             this.btnAddNewCa.Font = new System.Drawing.Font("Microsoft Sans Serif", 10.2F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnAddNewCa.Location = new System.Drawing.Point(755, 79);
+            this.btnAddNewCa.Location = new System.Drawing.Point(616, 79);
             this.btnAddNewCa.Name = "btnAddNewCa";
             this.btnAddNewCa.Size = new System.Drawing.Size(196, 56);
-            this.btnAddNewCa.TabIndex = 9;
+            this.btnAddNewCa.TabIndex = 2;
             this.btnAddNewCa.Text = "Thêm CA mới";
             this.btnAddNewCa.UseVisualStyleBackColor = false;
             this.btnAddNewCa.Click += new System.EventHandler(this.btnAddNewCa_Click);

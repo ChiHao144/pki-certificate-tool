@@ -147,7 +147,6 @@ namespace CheckCertTool
                                 if (dialogResult == DialogResult.No)
                                 {
                                     txtResult.Text = "";
-                                    txtUserFile.Text = "";
                                 }    
                                 if (result.caValidityStatus == "NOT_FOUND_IN_TRUSTSTORE") return;
                             }
@@ -243,6 +242,7 @@ namespace CheckCertTool
             }
         }
 
+        // Muốn chọn file CA certificate thủ công khi gặp vấn đề về hết hạn, không có CA trong kho lưu trữ
         private async Task ReCheckWithManualCA(string userPath, string manualCaPath)
         {
             try
@@ -342,6 +342,7 @@ namespace CheckCertTool
 
         }
 
+        // THÊM CA MỚI VÀO KHO LƯU TRỮ 
         private async void btnAddNewCa_Click(object sender, EventArgs e)
         {
             using (OpenFileDialog openFileDialog = new OpenFileDialog())

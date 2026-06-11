@@ -14,9 +14,9 @@ public class CertificateInfoResponse {
     private String crlStatus;
     private String ocspStatus;
     private String caProvider;
-    private String certValidityStatus; // Trạng thái hạn User: VALID / EXPIRED
-    private String caValidityStatus;   // Trạng thái hạn CA: VALID / EXPIRED
-    private String crlValidityStatus;  // Trạng thái hạn bản tin CRL: VALID / EXPIRED
+    private String certValidityStatus;
+    private String caValidityStatus;   
+    private String crlValidityStatus; 
 
     /**
      * @return the subject

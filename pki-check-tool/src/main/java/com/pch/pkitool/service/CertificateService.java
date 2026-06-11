@@ -73,21 +73,45 @@ public class CertificateService {
 
         X509Certificate finalCaCert = null;
 
-        // FALLBACK LOGIC: If manual CA is uploaded, use it immediately
+        // Upload CA mới do bị cảnh báo hết hạn, không có CA trong kho lưu trữ
         if (caFile != null && !caFile.isEmpty()) {
             byte[] caBytes = caFile.getBytes();
             finalCaCert = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(caBytes));
         } else {
-            // Automatically search inside internal TrustStore folder
-            String caFileName = "TrustStore/" + provider.toUpperCase() + ".cer";
-            File localCaFile = new File(caFileName);
+            // BẰNG LUỒNG QUÉT ĐỘNG THÔNG MINH:
+            File trustStoreDir = new File("TrustStore");
 
-            if (!localCaFile.exists()) {
+            if (trustStoreDir.exists() && trustStoreDir.isDirectory()) {
+                File[] files = trustStoreDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".cer"));
+                if (files != null) {
+                    for (File file : files) {
+                        try (FileInputStream fis = new FileInputStream(file)) {
+                            X509Certificate candidateCa = (X509Certificate) cf.generateCertificate(fis);
+
+                            // KIỂM TRA ĐIỀU KIỆN 1: Tên Subject của CA phải trùng với Issuer của User Cert
+                            if (candidateCa.getSubjectX500Principal().equals(cert.getIssuerX500Principal())) {
+
+                                // KIỂM TRA ĐIỀU KIỆN 2: Thử xác thực chữ ký (Toán học mã hóa)
+                                try {
+                                    cert.verify(candidateCa.getPublicKey());
+                                    // Nếu verify thành công không báo lỗi -> Đây chính là CA chuẩn xác cần tìm!
+                                    finalCaCert = candidateCa;
+                                    break;
+                                } catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException | CertificateException e) {
+                                    // Sai thuật toán hoặc sai cặp khóa, tiếp tục loop thử file CA khác
+                                }
+                            }
+                        } catch (Exception e) {
+                            // File lỗi hoặc lỗi đọc, bỏ qua thử file tiếp theo
+                        }
+                    }
+                }
+            }
+
+            // Kiểm tra xem cuối cùng có tìm được CA nào không
+            if (finalCaCert == null) {
                 dto.setCaValidityStatus("NOT_FOUND_IN_TRUSTSTORE");
                 return dto;
-            }
-            try (FileInputStream fis = new FileInputStream(localCaFile)) {
-                finalCaCert = (X509Certificate) cf.generateCertificate(fis);
             }
         }
 
@@ -121,43 +145,48 @@ public class CertificateService {
             dto.setCaValidityStatus("EXPIRED"); // Báo EXPIRED để WinForms kích hoạt luồng dự phòng
         }
 
-        // Run validation services
         dto.setCrlStatus(crlService.checkCRL(cert, finalCaCert, cf, dto));
         dto.setOcspStatus(ocspService.checkOCSP(cert, finalCaCert));
 
         return dto;
     }
 
+    // Lưu CA mới vào kho lưu trữ
     public String saveCaToTrustStore(MultipartFile caFile) throws Exception {
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
         byte[] caBytes = caFile.getBytes();
 
-        // Read the binary layout of the uploaded CA certificate
         X509Certificate caCert = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(caBytes));
-
-        // Extract the Subject DN instead of Issuer DN
         String subjectDN = caCert.getSubjectX500Principal().getName();
 
-        // Reuse our keyword parser tool to extract short neat name (e.g. FPT, VNPT)
+        // Gọi detectCAProvider từ Util
         String caProviderKey = CertificateUtil.detectCAProvider(subjectDN);
 
         if ("UNKNOWN_CA".equals(caProviderKey)) {
-            // Fallback to a sanitized CN name if it is a completely new provider
+            // Không lấy được thì tạo file bằng đầu bằng NEW_số serial
             caProviderKey = "NEW_" + caCert.getSerialNumber().toString(16).toUpperCase();
         }
 
-        // Ensure the internal TrustStore directory exists locally
+        // Trỏ tới đường dẫn local hiện tại
         Path trustStoreFolder = Paths.get("TrustStore");
         if (!Files.exists(trustStoreFolder)) {
             Files.createDirectories(trustStoreFolder);
         }
 
-        // Establish permanent destination path: TrustStore/PROVIDER.cer
-        Path targetPath = trustStoreFolder.resolve(caProviderKey.toUpperCase() + ".cer");
+        // Lấy tên thuật toán ký (Vd: SHA256withRSA, SHA1withRSA)
+        String sigAlgName = caCert.getSigAlgName().replace("with", "_").toUpperCase();
 
-        // Save or overwrite bytes onto local storage disk stream safely
+        // Lấy 4 số cuối của Serial Number để tránh trùng danh mục
+        String serialStr = caCert.getSerialNumber().toString(16).toUpperCase();
+        String serialSuffix = serialStr.length() > 4 ? serialStr.substring(serialStr.length() - 4) : serialStr;
+
+        String finalFileName = String.format("%s_%s_%s.cer", caProviderKey.toUpperCase(), sigAlgName, serialSuffix);  
+        Path targetPath = trustStoreFolder.resolve(finalFileName);
+
+        // Lưu file dưới dạng CaProvider.cer vào TrustStore
+        // Lưu và ghi lên ổ cứng của máy
         Files.copy(new ByteArrayInputStream(caBytes), targetPath, StandardCopyOption.REPLACE_EXISTING);
 
-        return caProviderKey; // Return the string key to C# for visualization
+        return caProviderKey; // Trả về chuỗi làm khóa
     }
 }

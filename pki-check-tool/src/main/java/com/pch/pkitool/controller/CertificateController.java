@@ -22,18 +22,17 @@ import org.springframework.web.multipart.MultipartFile;
  *
  * @author Chi Hao
  */
-@RestController // Biến class thành 1 API để trả về dạng JSON
-@RequestMapping("certificate") // Đường dẫn gốc cho toàn bộ API 
+@RestController 
+@RequestMapping("certificate") 
 @CrossOrigin
 public class CertificateController {
 
-    @Autowired // Kích hoạt cơ chế injection
-    private CertificateService certificateService; // Khai báo biến đại diện ở tầng nghiệp vụ
+    @Autowired 
+    private CertificateService certificateService; 
 
-    @PostMapping("/info") // User bây giờ chỉ cần upload userFile
+    @PostMapping("/info") 
     public CertificateInfoResponse getCertificateInfoResponse(@RequestParam("userFile") MultipartFile userFile,
             @RequestParam(value = "caFile", required = false) MultipartFile caFile) throws CertificateException, IOException, FileNotFoundException, CRLException, OperatorCreationException, OCSPException {
-        // Gọi tần service xử lý trả dữ liệu về cho client
         return certificateService.readCertificate(userFile, caFile);
     }
 

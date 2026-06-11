@@ -180,7 +180,7 @@ public class CertificateService {
         String serialStr = caCert.getSerialNumber().toString(16).toUpperCase();
         String serialSuffix = serialStr.length() > 4 ? serialStr.substring(serialStr.length() - 4) : serialStr;
 
-        String finalFileName = String.format("%s_%s_%s.cer", caProviderKey.toUpperCase(), sigAlgName, serialSuffix);  
+        String finalFileName = String.format("%s_%s_%s.cer", caProviderKey.toUpperCase(), sigAlgName, serialSuffix);
         Path targetPath = trustStoreFolder.resolve(finalFileName);
 
         // Lưu file dưới dạng CaProvider.cer vào TrustStore

@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import static java.lang.System.out;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.cert.CertificateEncodingException;
@@ -46,7 +45,7 @@ public class OCSPService {
             if (ocspUrl == null || ocspUrl.isEmpty()) {
                 return "OCSP_URL_NOT_FOUND_IN_CERT";
             }
-            
+
             // Bước 1: Khởi tạo danh sách các thuật toán băm cần thử nghiệm (Ưu tiên SHA-256 trước, SHA-1 sau)
             org.bouncycastle.asn1.ASN1ObjectIdentifier[] hashAlgorithms = {
                 NISTObjectIdentifiers.id_sha256,
@@ -64,7 +63,7 @@ public class OCSPService {
                     OCSPReqBuilder builder = new OCSPReqBuilder();
                     builder.addRequest(certId);
                     OCSPReq request = builder.build();
-                  
+
                     // Giao tiếp mạng HTTP POST lên máy chủ CA Responder
                     URL url = new URL(ocspUrl);
                     HttpURLConnection con = (HttpURLConnection) url.openConnection();
@@ -79,7 +78,6 @@ public class OCSPService {
                         out.write(request.getEncoded());
                         out.flush();
                     }
-                    out.close();
 
                     // Nhận phản hồi và phân tích mã trạng thái từ máy chủ CA
                     try (InputStream in = con.getInputStream()) {
@@ -137,7 +135,12 @@ public class OCSPService {
                 ASN1OctetString octetString = (ASN1OctetString) asn1In.readObject();
                 try (ASN1InputStream asn1InOctet = new ASN1InputStream(new ByteArrayInputStream(octetString.getOctets()))) {
                     ASN1Sequence seq = (ASN1Sequence) asn1InOctet.readObject();
-                    
+
+                    // Nếu sequence bị rỗng hoặc lỗi cấu trúc
+                    if (seq == null || seq.size() == 0) {
+                        return null; // Trả về null an toàn để luồng chính báo "OCSP_URL_NOT_FOUND_IN_CERT"
+                    }
+
                     // duyệt qua từng phần tử mô tả truy cập trong chuỗi tuần tự
                     for (int i = 0; i < seq.size(); i++) {
                         ASN1Sequence accessDescription = (ASN1Sequence) seq.getObjectAt(i);

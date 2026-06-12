@@ -6,6 +6,7 @@ package com.pch.pkitool.dto;
  */
 // Bộ khung chuẩn hóa dữ liệu bao gồm kết quả xử lý và trả về cho phía giao diện
 public class CertificateInfoResponse {
+
     private String subject;
     private String issuer;
     private String serialNumber;
@@ -15,8 +16,8 @@ public class CertificateInfoResponse {
     private String ocspStatus;
     private String caProvider;
     private String certValidityStatus;
-    private String caValidityStatus;   
-    private String crlValidityStatus; 
+    private String caValidityStatus;
+    private String crlValidityStatus;
 
     /**
      * @return the subject

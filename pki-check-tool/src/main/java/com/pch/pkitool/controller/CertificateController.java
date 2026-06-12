@@ -22,27 +22,39 @@ import org.springframework.web.multipart.MultipartFile;
  *
  * @author Chi Hao
  */
-@RestController 
-@RequestMapping("certificate") 
+@RestController
+@RequestMapping("certificate")
 @CrossOrigin
 public class CertificateController {
 
-    @Autowired 
-    private CertificateService certificateService; 
+    @Autowired
+    private CertificateService certificateService;
 
-    @PostMapping("/info") 
+    @PostMapping("/info")
     public CertificateInfoResponse getCertificateInfoResponse(@RequestParam("userFile") MultipartFile userFile,
             @RequestParam(value = "caFile", required = false) MultipartFile caFile) throws CertificateException, IOException, FileNotFoundException, CRLException, OperatorCreationException, OCSPException {
         return certificateService.readCertificate(userFile, caFile);
     }
 
     @PostMapping("/upload-ca")
-    public ResponseEntity<String> uploadCaFile(@RequestParam("caFile") MultipartFile caFile) {
+    public ResponseEntity<String> uploadCaFile(
+            @RequestParam("caFile") MultipartFile caFile) {
+
         try {
+
             String caName = certificateService.saveCaToTrustStore(caFile);
             return ResponseEntity.ok(caName);
+
+        } catch (IllegalArgumentException e) {
+
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body("INVALID_CA_FILE_IS_USER");
+
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(e.getMessage());
         }
     }

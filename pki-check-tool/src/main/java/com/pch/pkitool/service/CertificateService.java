@@ -51,7 +51,7 @@ public class CertificateService {
         }
     }
 
-    // Hàm xử lý 2 file nhị phân và trả về đối tượng kết quả
+    // Hàm xử lý file nhị phân và trả về đối tượng kết quả
     public CertificateInfoResponse readCertificate(MultipartFile userFile, MultipartFile caFile) throws OperatorCreationException, OCSPException, CertificateException, IOException, FileNotFoundException, CRLException {
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
 
@@ -72,13 +72,70 @@ public class CertificateService {
         dto.setCaProvider(provider);
 
         X509Certificate finalCaCert = null;
+        
+        // Xác định chế độ kiểm tra
+        boolean manualMode = caFile != null && !caFile.isEmpty();
 
-        // Upload CA mới do bị cảnh báo hết hạn, không có CA trong kho lưu trữ
-        if (caFile != null && !caFile.isEmpty()) {
+        /* ==========================================================
+           MANUAL MODE
+           ========================================================== */
+        if (manualMode) {
+
             byte[] caBytes = caFile.getBytes();
-            finalCaCert = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(caBytes));
-        } else {
-            // BẰNG LUỒNG QUÉT ĐỘNG THÔNG MINH:
+            finalCaCert = (X509Certificate) cf.generateCertificate(
+                    new ByteArrayInputStream(caBytes));
+
+            boolean userIsCA = cert.getBasicConstraints() >= 0;
+            boolean caIsCA = finalCaCert.getBasicConstraints() >= 0;
+
+            System.out.println("USER BasicConstraints = "
+                    + cert.getBasicConstraints());
+
+            System.out.println("CA BasicConstraints = "
+                    + finalCaCert.getBasicConstraints());
+
+            // Người dùng chọn cùng một file cho cả 2 vị trí
+            if (cert.getSerialNumber().equals(finalCaCert.getSerialNumber())) {
+
+                dto.setCaValidityStatus("INVALID_CA_FILE_IS_SAME_AS_USER");
+                return dto;
+            }
+
+            // USER + USER
+            if (!userIsCA && !caIsCA) {
+
+                dto.setCaValidityStatus("INVALID_CA_FILE_IS_USER");
+                return dto;
+            }
+
+            // CA + CA
+            if (userIsCA && caIsCA) {
+
+                dto.setCaValidityStatus("INVALID_BOTH_FILES_ARE_CA");
+                return dto;
+            }
+
+            // CA + USER (đảo vị trí)
+            if (userIsCA && !caIsCA) {
+
+                dto.setCaValidityStatus("INVALID_FILES_REVERSED");
+                return dto;
+            }
+
+            // USER + CA
+            // Hợp lệ -> tiếp tục xử lý phía dưới
+        } /* ==========================================================
+             AUTO MODE
+             ========================================================== */ else {
+
+            // Chặn nếu người dùng nạp CA vào ô User
+            if (cert.getBasicConstraints() >= 0) {
+
+                dto.setCertValidityStatus("INVALID_USER_FILE_IS_CA");
+                return dto;
+            }
+
+            // Truy cập TrustStore quét CA phù hợp
             File trustStoreDir = new File("TrustStore");
 
             if (trustStoreDir.exists() && trustStoreDir.isDirectory()) {
@@ -88,10 +145,9 @@ public class CertificateService {
                         try (FileInputStream fis = new FileInputStream(file)) {
                             X509Certificate candidateCa = (X509Certificate) cf.generateCertificate(fis);
 
-                            // KIỂM TRA ĐIỀU KIỆN 1: Tên Subject của CA phải trùng với Issuer của User Cert
+                            // Kiểm tra tên Subject của CA phải trùng với Issuer của User Cert
                             if (candidateCa.getSubjectX500Principal().equals(cert.getIssuerX500Principal())) {
-
-                                // KIỂM TRA ĐIỀU KIỆN 2: Thử xác thực chữ ký (Toán học mã hóa)
+                                // Thử xác thực chữ ký candidateCa.getPublicKey
                                 try {
                                     cert.verify(candidateCa.getPublicKey());
                                     // Nếu verify thành công không báo lỗi -> Đây chính là CA chuẩn xác cần tìm!
@@ -114,7 +170,7 @@ public class CertificateService {
                 return dto;
             }
         }
-
+        
         // Gọi dịch vụ kiểm tra trạng thái qua CRL và OCSP
         Date now = new Date();
 
@@ -159,6 +215,11 @@ public class CertificateService {
         X509Certificate caCert = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(caBytes));
         String subjectDN = caCert.getSubjectX500Principal().getName();
 
+        // Chặn không cho lưu file User vào kho CA
+        if (caCert.getBasicConstraints() == -1) {
+            throw new IllegalArgumentException("Định dạng sai: Tệp tin nạp lên là chứng chỉ cá nhân/doanh nghiệp (User Cert), không phải là chứng chỉ nhà cấp phát CA!");
+        }
+
         // Gọi detectCAProvider từ Util
         String caProviderKey = CertificateUtil.detectCAProvider(subjectDN);
 
@@ -187,6 +248,6 @@ public class CertificateService {
         // Lưu và ghi lên ổ cứng của máy
         Files.copy(new ByteArrayInputStream(caBytes), targetPath, StandardCopyOption.REPLACE_EXISTING);
 
-        return caProviderKey; // Trả về chuỗi làm khóa
+        return finalFileName; // Trả về tên  file cert
     }
 }

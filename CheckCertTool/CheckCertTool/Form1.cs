@@ -12,6 +12,7 @@ using System.Net.Http;
 using Newtonsoft.Json;
 using System.Diagnostics;
 using Newtonsoft.Json.Linq;
+using System.Net;
 
 namespace CheckCertTool
 {
@@ -75,13 +76,14 @@ namespace CheckCertTool
             if (string.IsNullOrEmpty(userPath))
             {
                 MessageBox.Show("Vui lòng chọn tệp tin chứng chỉ trước khi kiểm tra!",
-                                "Thông báo vận hành", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             txtResult.Text = "Hệ thống đang kết nối luồng xử lý và tải tệp tin...";
-            btnCheck.Enabled = false;
-       
+            btnCheckAuto.Enabled = false;
+            txtCaFileManual.Text = string.Empty;
+
             lblCaProvider.Text = string.Empty;
             lblSerialNumber.Text = string.Empty;
             lblValidFrom.Text = string.Empty;
@@ -109,12 +111,33 @@ namespace CheckCertTool
                             string jsonResponse = await response.Content.ReadAsStringAsync();
                             CertificateInfoResponse result = JsonConvert.DeserializeObject<CertificateInfoResponse>(jsonResponse);
 
+                            
+
+                            // CẢNH BÁO KHI NẠP 2 FILE USER VÀO CẢ 2 VỊ TRÍ
+                            if (result.caValidityStatus == "INVALID_CA_FILE_IS_SAME_AS_USER")
+                            {
+                                txtResult.Text = string.Empty;
+                                MessageBox.Show("THAO TÁC SAI:\nHệ thống phát hiện tệp tin CA dự phòng trùng khớp hoàn toàn với tệp tin chứng chỉ Người dùng!\nVui lòng không chọn cùng một file.",
+                                                "Trùng lặp dữ liệu", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+                                return;
+                            }
+
+                            // CẢNH BÁO: NẠP NHẦM FILE CA VÀO Ô USER FILE
+                            if (result.certValidityStatus == "INVALID_USER_FILE_IS_CA")
+                            {
+                                txtResult.Text = string.Empty;
+                                MessageBox.Show("THAO TÁC SAI:\nBạn đang chọn một tệp tin chứng chỉ CA (gốc) nạp vào ô dành cho chứng chỉ Người dùng (User Certificate)!\nVui lòng kiểm tra và chọn lại đúng file.",
+                                                "Lỗi truyền dữ liệu", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+                                txtUserFile.Text = string.Empty;
+                                return;
+                            }
+
                             // CẢNH BÁO SAI LỆCH NHÀ CUNG CẤP CA VỚI USER
                             if (result.caValidityStatus == "MISMATCHED_CA_CHAIN")
                             {
                                 txtResult.Text = string.Empty;
                                 MessageBox.Show("CẢNH BÁO NGUY HIỂM:\nTệp tin chứng chỉ CA được chọn không trùng khớp với chữ ký gốc trên chứng chỉ User!\nLuồng kiểm tra chuỗi tin cậy (Chain of Trust) bị thất bại.",
-                                                "Sai lệch nhà cấp phát CA", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                                                "Sai nhà cấp phát CA", MessageBoxButtons.OK, MessageBoxIcon.Stop);
                                 return;
                             }
 
@@ -122,10 +145,10 @@ namespace CheckCertTool
                             if (result.caValidityStatus == "NOT_FOUND_IN_TRUSTSTORE" || result.caValidityStatus == "EXPIRED")
                             {
                                 string warningMsg = result.caValidityStatus == "EXPIRED"
-                                    ? $"Chứng chỉ CA tự động của mạng [{result.caProvider}] đã hết hạn sử dụng!\nBạn có muốn tự chọn file CA khác từ máy tính để kiểm tra dự phòng không?"
-                                    : $"Không tìm thấy file CA của mạng [{result.caProvider}] trong kho!\nBạn có muốn tự chọn file CA bằng tay không?";
+                                    ? $"Chứng chỉ CA [{result.caProvider}] đã hết hạn sử dụng!\nBạn có muốn tự chọn file CA khác từ máy tính để kiểm tra dự phòng không?"
+                                    : $"Không tìm thấy file CA [{result.caProvider}] trong kho!\nBạn có muốn tự chọn file CA bằng tay không?";
 
-                                DialogResult dialogResult = MessageBox.Show(warningMsg, "Hệ thống CA có bất ổn", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                                DialogResult dialogResult = MessageBox.Show(warningMsg, "Hệ thống CA có lỗi", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 
                                 if (dialogResult == DialogResult.Yes)
                                 {
@@ -157,8 +180,8 @@ namespace CheckCertTool
                             if (result.caValidityStatus == "NOT_FOUND_IN_TRUSTSTORE")
                             {
                                 txtResult.Text = string.Empty;
-                                MessageBox.Show($"Hệ thống chưa tích hợp tệp chứng chỉ CA của nhà mạng [{result.caProvider}] vào kho TrustStore!\nVui lòng sao chép tệp tin `{result.caProvider}.cer` vào thư mục hệ thống.",
-                                                "Thiếu dữ liệu hạ tầng", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                MessageBox.Show($"Hệ thống chưa tích hợp tệp chứng chỉ CA của [{result.caProvider}] vào kho TrustStore!\nVui lòng sao chép tệp tin `{result.caProvider}.cer` vào thư mục hệ thống.",
+                                                "Thiếu dữ liệu", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                                 return;
                             }
 
@@ -193,17 +216,17 @@ namespace CheckCertTool
                             // 5. HIỂN THỊ VÀ TÔ MÀU TRẠNG THÁI KIỂM TRA TĨNH CRL 
                             if (result.crlStatus == "VALID" && result.crlValidityStatus == "VALID")
                             {
-                                lblCrlStatus.Text = "Trạng thái CRL: Hợp lệ (VALID)";
+                                lblCrlStatus.Text = "Trạng thái CRL: VALID";
                                 lblCrlStatus.ForeColor = System.Drawing.Color.Green;
                             }
                             else if (result.crlStatus == "CRL_EXPIRED" || result.crlValidityStatus == "EXPIRED")
                             {
-                                lblCrlStatus.Text = "Trạng thái CRL: Bản tin tĩnh từ CA đã quá hạn cập nhật (CRL_EXPIRED)";
+                                lblCrlStatus.Text = "Trạng thái CRL: CRL từ CA đã quá hạn (CRL_EXPIRED)";
                                 lblCrlStatus.ForeColor = System.Drawing.Color.OrangeRed;
                             }
                             else if (result.crlStatus == "REVOKED")
                             {
-                                lblCrlStatus.Text = "Trạng thái CRL: Đã bị thu hồi hoặc khóa (REVOKED)";
+                                lblCrlStatus.Text = "Trạng thái CRL: REVOKED";
                                 lblCrlStatus.ForeColor = System.Drawing.Color.Red;
                             }
                             else
@@ -225,7 +248,7 @@ namespace CheckCertTool
                                     ? System.Drawing.Color.Green : System.Drawing.Color.Red;
                             }
 
-                            MessageBox.Show("Xác thực và phân tích dữ liệu thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            MessageBox.Show("Xác thực và phân tích dữ liệu thành công!", "Thông báo thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         }
                     }
                 }
@@ -238,7 +261,7 @@ namespace CheckCertTool
             }
             finally
             {
-                btnCheck.Enabled = true; // Nút được bật lại kể cả khi bị lỗi kết nối
+                btnCheckAuto.Enabled = true; // Nút được bật lại kể cả khi bị lỗi kết nối
             }
         }
 
@@ -267,22 +290,115 @@ namespace CheckCertTool
                             string jsonResponse = await response.Content.ReadAsStringAsync();
                             txtResult.Text = JToken.Parse(jsonResponse).ToString(Formatting.Indented);
 
-                            // Display response values directly onto the UI labels
                             CertificateInfoResponse result = JsonConvert.DeserializeObject<CertificateInfoResponse>(jsonResponse);
+
+                            // Trùng tệp tin
+                            if (result.caValidityStatus == "INVALID_CA_FILE_IS_SAME_AS_USER")
+                            {
+                                txtResult.Text = string.Empty;
+                                MessageBox.Show("THAO TÁC SAI:\nBạn đang chọn cùng một tệp tin chứng chỉ Người dùng cho cả 2 vị trí kiểm tra!\nMột chứng chỉ cá nhân không thể tự xác thực cho chính nó.",
+                                                "Trùng lặp dữ liệu", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                return;
+                            }
+
+                            // Dùng tài khoản User này đi chứng cho User khác
+                            if (result.caValidityStatus == "INVALID_CA_FILE_IS_USER")
+                            {
+                                txtResult.Text = string.Empty;
+                                MessageBox.Show("THAO TÁC SAI:\nTệp tin bạn vừa chọn làm CA là chứng chỉ của một cá nhân/người dùng khác (End-Entity Certificate)!\nVui lòng chọn đúng tệp tin CA gốc/trung gian của nhà mạng.",
+                                                "Lỗi mạo danh nhà cấp phát CA", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+
+                            // Dùng một CA khác kiểm tra user
                             if (result.caValidityStatus == "MISMATCHED_CA_CHAIN")
                             {
                                 txtResult.Text = string.Empty;
                                 MessageBox.Show("CẢNH BÁO NGUY HIỂM:\nTệp tin chứng chỉ CA được chọn không trùng khớp với chữ ký gốc trên chứng chỉ User!\nLuồng kiểm tra chuỗi tin cậy (Chain of Trust) bị thất bại.",
-                                                "Sai lệch nhà cấp phát CA", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                                                "Sai nhà cấp phát CA", MessageBoxButtons.OK, MessageBoxIcon.Stop);
                                 return;
                             }
 
+                            // Cả 2 đều là file CA
+                            if (result.caValidityStatus == "INVALID_BOTH_FILES_ARE_CA")
+                            {
+                                txtResult.Text = string.Empty;
+                                MessageBox.Show("THAO TÁC SAI:\nCả hai tệp tin truyền vào đều là CA Certificate\nVui lòng chọn đúng theo nội dung!", 
+                                                "Trùng lặp đữ liệu", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }    
+                            
+                            // Vị trí CA và User bị đổi lộn
+                            if (result.caValidityStatus == "INVALID_FILES_REVERSED")
+                            {
+                                txtResult.Text = string.Empty;
+                                MessageBox.Show("THAO TÁC SAI:\nTruyền sai vị trí ô chứa của CA và User\nVui lòng truyền đúng vị trí để kiểm tra!",
+                                    "Sai vị trí truyền file", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }    
+
+                            // 2. ĐỔ DỮ LIỆU ĐỊNH DANH CƠ BẢN LÊN GIAO DIỆN
                             lblValidFrom.Text = "Có hiệu lực từ: " + result.validFrom;
                             lblValidTo.Text = "Hết hạn vào: " + result.validTo;
-                            lblCaProvider.Text = "Nhà cung cấp (CA thủ công): " + result.caProvider;
-                            lblSerialNumber.Text = "Số Serial (Hex): " + result.serialNumber.ToUpper();
-                            lblCrlStatus.Text = "Trạng thái CRL: " + result.crlStatus;
-                            lblOcspStatus.Text = "Trạng thái OCSP: " + result.ocspStatus;
+
+                            // 3. HIỂN THỊ TRẠNG THÁI VÀ MÀU SẮC HẠN CHỨNG CHỈ USER 
+                            if (result.certValidityStatus == "EXPIRED")
+                            {
+                                lblSerialNumber.Text = "Số Serial (Hex): " + result.serialNumber.ToUpper() + " (* HẾT HẠN)";
+                                lblSerialNumber.ForeColor = System.Drawing.Color.Red;
+                            }
+                            else
+                            {
+                                lblSerialNumber.Text = "Số Serial (Hex): " + result.serialNumber.ToUpper();
+                                lblSerialNumber.ForeColor = System.Drawing.Color.DarkBlue;
+                            }
+
+                            // 4. HIỂN THỊ TRẠNG THÁI VÀ CẢNH BÁO CHỨNG CHỈ CA NỀN 
+                            if (result.caValidityStatus == "EXPIRED")
+                            {
+                                lblCaProvider.Text = "Nhà cung cấp (CA): " + result.caProvider + " (* CA ĐÃ HẾT HẠN!)";
+                                lblCaProvider.ForeColor = System.Drawing.Color.DarkRed;
+                            }
+                            else
+                            {
+                                lblCaProvider.Text = "Nhà cung cấp (CA): " + result.caProvider;
+                                lblCaProvider.ForeColor = System.Drawing.Color.Black;
+                            }
+
+                            // 5. HIỂN THỊ VÀ TÔ MÀU TRẠNG THÁI KIỂM TRA TĨNH CRL 
+                            if (result.crlStatus == "VALID" && result.crlValidityStatus == "VALID")
+                            {
+                                lblCrlStatus.Text = "Trạng thái CRL: VALID";
+                                lblCrlStatus.ForeColor = System.Drawing.Color.Green;
+                            }
+                            else if (result.crlStatus == "CRL_EXPIRED" || result.crlValidityStatus == "EXPIRED")
+                            {
+                                lblCrlStatus.Text = "Trạng thái CRL: CRL từ CA đã quá hạn (CRL_EXPIRED)";
+                                lblCrlStatus.ForeColor = System.Drawing.Color.OrangeRed;
+                            }
+                            else if (result.crlStatus == "REVOKED")
+                            {
+                                lblCrlStatus.Text = "Trạng thái CRL: REVOKED";
+                                lblCrlStatus.ForeColor = System.Drawing.Color.Red;
+                            }
+                            else
+                            {
+                                lblCrlStatus.Text = "Trạng thái CRL: " + result.crlStatus;
+                                lblCrlStatus.ForeColor = System.Drawing.Color.DarkOrange;
+                            }
+
+                            // 6. HIỂN THỊ VÀ TÔ MÀU TRẠNG THÁI TRỰC TUYẾN OCSP
+                            if (result.ocspStatus.Contains("6") || result.ocspStatus == "UNAUTHORIZED_BY_CA")
+                            {
+                                lblOcspStatus.Text = "Trạng thái OCSP: UNAUTHORIZED_BY_CA (* Bị chặn truy vấn tự do)";
+                                lblOcspStatus.ForeColor = System.Drawing.Color.OrangeRed;
+                            }
+                            else
+                            {
+                                lblOcspStatus.Text = "Trạng thái OCSP: " + result.ocspStatus;
+                                lblOcspStatus.ForeColor = (result.ocspStatus == "GOOD" || result.ocspStatus == "VALID")
+                                    ? System.Drawing.Color.Green : System.Drawing.Color.Red;
+                            }
 
                             MessageBox.Show("Kiểm tra dự phòng bằng CA thủ công hoàn tất!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         }
@@ -315,7 +431,7 @@ namespace CheckCertTool
             catch (Exception ex)
             {
                 // Hiển thị thông báo nếu người vận hành xếp thiếu file trong thư mục
-                MessageBox.Show("Không tìm thấy tệp core xử lý nền (JavaBackend.exe)! " + ex.Message,
+                MessageBox.Show("Không tìm thấy tệp core xử lý nền JavaBackend.exe! " + ex.Message,
                                 "Lỗi cấu trúc Tool", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -368,11 +484,29 @@ namespace CheckCertTool
                                 // Bắn file sang API Java để Java tự lưu vào đúng vị trí của nó
                                 HttpResponseMessage response = await client.PostAsync("http://localhost:8080/certificate/upload-ca", formData);
 
+                                string result = await response.Content.ReadAsStringAsync();
                                 if (response.IsSuccessStatusCode)
                                 {
-                                    string caNameParsed = await response.Content.ReadAsStringAsync();
-                                    MessageBox.Show($"Hệ thống đã tự động lưu file vào đúng kho ngầm của Java: [{caNameParsed}]!",
-                                                    "Tự động hóa hoàn tất", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                    
+                                    MessageBox.Show($"Hệ thống đã lưu file CA vào TrustStore: [{result}]!",
+                                                    "Thông báo thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                }
+                                else if (response.StatusCode == HttpStatusCode.BadRequest)
+                                {
+                                    if (result == "INVALID_CA_FILE_IS_USER")
+                                    {
+                                        MessageBox.Show(
+                                            "THAO TÁC SAI:\n" +
+                                            "Tệp tin bạn vừa chọn là User Certificate, không phải CA Certificate.\n" +
+                                            "Vui lòng chọn đúng file CA.",
+                                            "Lỗi cấu trúc CA",
+                                            MessageBoxButtons.OK,
+                                            MessageBoxIcon.Hand);
+
+                                        return;
+                                    }
+
+                                    MessageBox.Show(result);
                                 }
                             }
                         }
@@ -385,6 +519,60 @@ namespace CheckCertTool
                     {
                         btnAddNewCa.Enabled = true; // Mở lại nút bấm
                     }
+                }
+            }
+        }
+
+        private async void btnCheckManual_Click(object sender, EventArgs e)
+        {
+            btnCheckManual.Enabled = false;
+
+            txtResult.Text = string.Empty;
+
+            lblCaProvider.Text = string.Empty;
+            lblSerialNumber.Text = string.Empty;
+            lblValidFrom.Text = string.Empty;
+            lblValidTo.Text = string.Empty;
+            lblCrlStatus.Text = string.Empty;
+            lblOcspStatus.Text = string.Empty;
+
+            try
+            {
+                string userPath = txtUserFile.Text;
+                string manualCaPath = txtCaFileManual.Text; // Ô chọn file CA thủ công mới kéo vào
+
+                // Kiểm tra đầu vào bắt buộc phải có cả 2 file
+                if (string.IsNullOrEmpty(userPath) || string.IsNullOrEmpty(manualCaPath))
+                {
+                    MessageBox.Show("Vui lòng chọn đầy đủ cả tệp tin chứng chỉ User và tệp tin CA!",
+                                    "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Nếu người dùng chọn trùng 1 file cho cả 2 ô
+                if (userPath.Trim().Equals(manualCaPath.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    MessageBox.Show("THAO TÁC SAI:\n" + "Thao tác sai quy cách: Bạn đang chọn cùng một file User/CA cho cả 2 vị trí!",
+                                    "Trùng lặp tệp tin", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // Gọi lại chính cái hàm xử lý luồng bằng tay hiện tại của ông là xong!
+                await ReCheckWithManualCA(userPath, manualCaPath);
+            } finally
+            {
+                btnCheckManual.Enabled = true;
+            }
+        }
+
+        private void btnBrowseCaManual_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog ofd = new OpenFileDialog())
+            {
+                ofd.Filter = "Certificate Files (*.cer;*.crt)|*.cer;*.crt|All files (*.*)|*.*";
+                if (ofd.ShowDialog() == DialogResult.OK)
+                {
+                    txtCaFileManual.Text = ofd.FileName;    // đổ đường dẫn file vào textbox
                 }
             }
         }

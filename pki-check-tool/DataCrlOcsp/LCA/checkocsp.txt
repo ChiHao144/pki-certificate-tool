@@ -1,0 +1,1 @@
+openssl ocsp -issuer LCA.cer -CAfile LCA.cer -cert KH_LCA.cer -text -url http://ocsp.lca.la/ocsp/responder

@@ -1,0 +1,1 @@
+openssl ocsp -issuer WINCA.cer -CAfile WINCA.cer -cert KHWIN.cer -text -url http://ocsp.winca.org

@@ -1,0 +1,1 @@
+openssl ocsp -issuer CMCCA_SHA256_Chain.cer -CAfile CMCCA_SHA256_Chain.cer -cert 0316127323.cer -text -url http://ca.cmc.vn/ocsp

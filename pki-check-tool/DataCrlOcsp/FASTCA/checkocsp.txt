@@ -1,0 +1,1 @@
+openssl ocsp -issuer FastCA_SHA-256.cer -CAfile FastCA_SHA-256.cer -cert KH_FAST.cer -text -url http://ocsp.fastca.vn

@@ -1,0 +1,1 @@
+openssl ocsp -issuer R3.crt -CAfile R3.crt -cert ssa.csign.cmc.vn.crt -text -url http://cps.letsencrypt.org

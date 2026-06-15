@@ -1,0 +1,1 @@
+openssl ocsp -issuer VIETTEL_SHA2_EX2029.cer -CAfile VIETTEL_SHA2_EX2029.cer -cert OCB.cer -text -url http://ocsp.viettel-ca.vn

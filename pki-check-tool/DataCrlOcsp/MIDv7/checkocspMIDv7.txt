@@ -1,0 +1,1 @@
+openssl ocsp -issuer MIDv7.cer -CAfile MIDv7.cer -cert KH_MIDv7.cer -text -url http://192.168.3.70:8080/ejbca/publicweb/status/ocsp

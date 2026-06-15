@@ -1,0 +1,3 @@
+openssl ocsp -issuer MOBIFONE_CA.cer -CAfile MOBIFONE_CA.cer -cert KH_MOBIFONE_CA.cer -text -url http://ocsp.mobica.vn/responder
+
+openssl verify -extended_crl -crl_check_all -crl_download -CAfile MOBIFONE_CA.cer -verbose KH_MOBIFONE_CA.cer

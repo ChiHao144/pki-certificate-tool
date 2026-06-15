@@ -80,7 +80,7 @@ namespace CheckCertTool
                 return;
             }
 
-            txtResult.Text = "Hệ thống đang kết nối luồng xử lý và tải tệp tin...";
+           // txtResult.Text = "Hệ thống đang kết nối luồng xử lý và tải tệp tin...";
             btnCheckAuto.Enabled = false;
             txtCaFileManual.Text = string.Empty;
 
@@ -116,7 +116,7 @@ namespace CheckCertTool
                             // CẢNH BÁO KHI NẠP 2 FILE USER VÀO CẢ 2 VỊ TRÍ
                             if (result.caValidityStatus == "INVALID_CA_FILE_IS_SAME_AS_USER")
                             {
-                                txtResult.Text = string.Empty;
+                                //txtResult.Text = string.Empty;
                                 MessageBox.Show("THAO TÁC SAI:\nHệ thống phát hiện tệp tin CA dự phòng trùng khớp hoàn toàn với tệp tin chứng chỉ Người dùng!\nVui lòng không chọn cùng một file.",
                                                 "Trùng lặp dữ liệu", MessageBoxButtons.OK, MessageBoxIcon.Hand);
                                 return;
@@ -125,7 +125,7 @@ namespace CheckCertTool
                             // CẢNH BÁO: NẠP NHẦM FILE CA VÀO Ô USER FILE
                             if (result.certValidityStatus == "INVALID_USER_FILE_IS_CA")
                             {
-                                txtResult.Text = string.Empty;
+                                //txtResult.Text = string.Empty;
                                 MessageBox.Show("THAO TÁC SAI:\nBạn đang chọn một tệp tin chứng chỉ CA (gốc) nạp vào ô dành cho chứng chỉ Người dùng (User Certificate)!\nVui lòng kiểm tra và chọn lại đúng file.",
                                                 "Lỗi truyền dữ liệu", MessageBoxButtons.OK, MessageBoxIcon.Hand);
                                 txtUserFile.Text = string.Empty;
@@ -135,7 +135,7 @@ namespace CheckCertTool
                             // CẢNH BÁO SAI LỆCH NHÀ CUNG CẤP CA VỚI USER
                             if (result.caValidityStatus == "MISMATCHED_CA_CHAIN")
                             {
-                                txtResult.Text = string.Empty;
+                                //txtResult.Text = string.Empty;
                                 MessageBox.Show("CẢNH BÁO NGUY HIỂM:\nTệp tin chứng chỉ CA được chọn không trùng khớp với chữ ký gốc trên chứng chỉ User!\nLuồng kiểm tra chuỗi tin cậy (Chain of Trust) bị thất bại.",
                                                 "Sai nhà cấp phát CA", MessageBoxButtons.OK, MessageBoxIcon.Stop);
                                 return;
@@ -169,17 +169,17 @@ namespace CheckCertTool
                                 }
                                 if (dialogResult == DialogResult.No)
                                 {
-                                    txtResult.Text = "";
+                                    //txtResult.Text = "";
                                 }    
                                 if (result.caValidityStatus == "NOT_FOUND_IN_TRUSTSTORE") return;
                             }
                             string prettyJson = JToken.Parse(jsonResponse).ToString(Formatting.Indented);
-                            txtResult.Text = prettyJson;
+                            //txtResult.Text = prettyJson;
 
                             // 1. TRƯỜNG HỢP NGOẠI LỆ: Thiếu file CA trong kho lưu trữ TrustStore
                             if (result.caValidityStatus == "NOT_FOUND_IN_TRUSTSTORE")
                             {
-                                txtResult.Text = string.Empty;
+                                //txtResult.Text = string.Empty;
                                 MessageBox.Show($"Hệ thống chưa tích hợp tệp chứng chỉ CA của [{result.caProvider}] vào kho TrustStore!\nVui lòng sao chép tệp tin `{result.caProvider}.cer` vào thư mục hệ thống.",
                                                 "Thiếu dữ liệu", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                                 return;
@@ -255,7 +255,7 @@ namespace CheckCertTool
             }
             catch (Exception ex)
             {
-                txtResult.Text = "Lỗi kết nối liên tầng: " + ex.Message;
+                //txtResult.Text = "Lỗi kết nối liên tầng: " + ex.Message;
                 MessageBox.Show("Không thể kết nối đến core Java ngầm. Vui lòng kiểm tra xem Spring Boot đã khởi động chưa!",
                                 "Lỗi kết nối", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -270,7 +270,7 @@ namespace CheckCertTool
         {
             try
             {
-                txtResult.Text = "Đang kiểm tra dự phòng với file CA chọn thủ công...";
+                //txtResult.Text = "Đang kiểm tra dự phòng với file CA chọn thủ công...";
                 using (var formData = new MultipartFormDataContent())
                 {
                     using (var userStream = new FileStream(userPath, FileMode.Open, FileAccess.Read))
@@ -288,14 +288,14 @@ namespace CheckCertTool
                         if (response.IsSuccessStatusCode)
                         {
                             string jsonResponse = await response.Content.ReadAsStringAsync();
-                            txtResult.Text = JToken.Parse(jsonResponse).ToString(Formatting.Indented);
+                            //txtResult.Text = JToken.Parse(jsonResponse).ToString(Formatting.Indented);
 
                             CertificateInfoResponse result = JsonConvert.DeserializeObject<CertificateInfoResponse>(jsonResponse);
 
                             // Trùng tệp tin
                             if (result.caValidityStatus == "INVALID_CA_FILE_IS_SAME_AS_USER")
                             {
-                                txtResult.Text = string.Empty;
+                                //txtResult.Text = string.Empty;
                                 MessageBox.Show("THAO TÁC SAI:\nBạn đang chọn cùng một tệp tin chứng chỉ Người dùng cho cả 2 vị trí kiểm tra!\nMột chứng chỉ cá nhân không thể tự xác thực cho chính nó.",
                                                 "Trùng lặp dữ liệu", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                 return;
@@ -304,7 +304,7 @@ namespace CheckCertTool
                             // Dùng tài khoản User này đi chứng cho User khác
                             if (result.caValidityStatus == "INVALID_CA_FILE_IS_USER")
                             {
-                                txtResult.Text = string.Empty;
+                                //txtResult.Text = string.Empty;
                                 MessageBox.Show("THAO TÁC SAI:\nTệp tin bạn vừa chọn làm CA là chứng chỉ của một cá nhân/người dùng khác (End-Entity Certificate)!\nVui lòng chọn đúng tệp tin CA gốc/trung gian của nhà mạng.",
                                                 "Lỗi mạo danh nhà cấp phát CA", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                                 return;
@@ -313,7 +313,7 @@ namespace CheckCertTool
                             // Dùng một CA khác kiểm tra user
                             if (result.caValidityStatus == "MISMATCHED_CA_CHAIN")
                             {
-                                txtResult.Text = string.Empty;
+                                //txtResult.Text = string.Empty;
                                 MessageBox.Show("CẢNH BÁO NGUY HIỂM:\nTệp tin chứng chỉ CA được chọn không trùng khớp với chữ ký gốc trên chứng chỉ User!\nLuồng kiểm tra chuỗi tin cậy (Chain of Trust) bị thất bại.",
                                                 "Sai nhà cấp phát CA", MessageBoxButtons.OK, MessageBoxIcon.Stop);
                                 return;
@@ -322,7 +322,7 @@ namespace CheckCertTool
                             // Cả 2 đều là file CA
                             if (result.caValidityStatus == "INVALID_BOTH_FILES_ARE_CA")
                             {
-                                txtResult.Text = string.Empty;
+                                //txtResult.Text = string.Empty;
                                 MessageBox.Show("THAO TÁC SAI:\nCả hai tệp tin truyền vào đều là CA Certificate\nVui lòng chọn đúng theo nội dung!", 
                                                 "Trùng lặp đữ liệu", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                                 return;
@@ -331,7 +331,7 @@ namespace CheckCertTool
                             // Vị trí CA và User bị đổi lộn
                             if (result.caValidityStatus == "INVALID_FILES_REVERSED")
                             {
-                                txtResult.Text = string.Empty;
+                                //txtResult.Text = string.Empty;
                                 MessageBox.Show("THAO TÁC SAI:\nTruyền sai vị trí ô chứa của CA và User\nVui lòng truyền đúng vị trí để kiểm tra!",
                                     "Sai vị trí truyền file", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                                 return;
@@ -527,7 +527,7 @@ namespace CheckCertTool
         {
             btnCheckManual.Enabled = false;
 
-            txtResult.Text = string.Empty;
+            //txtResult.Text = string.Empty;
 
             lblCaProvider.Text = string.Empty;
             lblSerialNumber.Text = string.Empty;

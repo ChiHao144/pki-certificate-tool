@@ -1,0 +1,1 @@
+openssl ocsp -issuer CA2_RS_Chain.cer -CAfile CA2_RS_Chain.cer -cert 001191009538.cer -text -url http://ocsprs.cavn.vn/ocsp/ocsp

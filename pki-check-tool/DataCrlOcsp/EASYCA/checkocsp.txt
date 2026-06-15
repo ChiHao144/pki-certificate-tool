@@ -1,0 +1,1 @@
+openssl ocsp -issuer EASYCA_USB_2024.cer -CAfile EASYCA_USB_2024.cer -cert KH_EASYCA.cer -text -url http://ocsp.easyca.vn/ocsp

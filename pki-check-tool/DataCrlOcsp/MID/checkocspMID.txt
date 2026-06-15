@@ -1,0 +1,1 @@
+openssl ocsp -issuer MID.cer -CAfile MID.cer -cert KH_MID.cer -text -url https://mobile-id.vn/ocsp/responder

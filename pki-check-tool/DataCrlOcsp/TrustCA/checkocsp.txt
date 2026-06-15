@@ -1,0 +1,1 @@
+openssl ocsp -issuer TRUSTCA.cer -CAfile TRUSTCA.cer -cert KHTRUSTCA2.cer -text -url http://ocsp.trustca.vn

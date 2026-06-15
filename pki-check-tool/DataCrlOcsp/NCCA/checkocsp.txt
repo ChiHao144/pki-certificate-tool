@@ -1,0 +1,1 @@
+openssl ocsp -issuer NC-CA_SHA256.cer -CAfile NC-CA_SHA256.cer -cert KHNCCA2.cer -text -url http://ocsp.nc-ca.vn/responder

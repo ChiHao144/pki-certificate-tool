@@ -1,0 +1,1 @@
+openssl ocsp -issuer ICA.cer -CAfile ICA.cer -cert KH_ICA.cer -text -url http://ocsp.i-ca.vn

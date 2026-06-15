@@ -1,0 +1,1 @@
+openssl ocsp -issuer HILO.cer -CAfile HILO.cer -cert TRANVANDU.cer -text -url http://ocsp.hilo-ca.vn

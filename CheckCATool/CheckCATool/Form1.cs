@@ -18,7 +18,6 @@ namespace CheckCATool
     public partial class Form1 : Form
     {
         private static readonly HttpClient client = new HttpClient();
-        private readonly string USER_SAMPLE_PATH = Path.Combine(Application.StartupPath, "user_sample.cer");
         public Form1()
         {
             InitializeComponent();
@@ -36,17 +35,18 @@ namespace CheckCATool
             label5.Text = "";
             label6.Text = "";
             label7.Text = "";
+            label8.Text = "";
         }
         private async void Form1_Load(object sender, EventArgs e)
         {
             try
             {
                 // Khởi động Server Spring Boot ngầm chạy song song
-                //System.Diagnostics.Process startJava = new System.Diagnostics.Process();
-                //startJava.StartInfo.FileName = "JavaBackend.exe";
-                //startJava.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-                //startJava.StartInfo.CreateNoWindow = true;
-                //startJava.Start();
+                System.Diagnostics.Process startJava = new System.Diagnostics.Process();
+                startJava.StartInfo.FileName = "JavaBackend.exe";
+                startJava.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+                startJava.StartInfo.CreateNoWindow = true;
+                startJava.Start();
 
                 // Chờ 2 giây để đảm bảo Spring Boot khởi động xong cổng 8080 rồi mới nạp ComboBox
                 await Task.Delay(2000);
@@ -78,7 +78,7 @@ namespace CheckCATool
 
                     if (cbCaTrustStore.Items.Count > 0)
                     {
-                        cbCaTrustStore.SelectedIndex = -1; // Chọn sẵn phần tử đầu tiên
+                        cbCaTrustStore.SelectedIndex = -1; // Không chọn sẵn phần tử đầu tiên 
                         cbCaTrustStore.Text = "--Chọn CA--";
                     }
                     else
@@ -118,6 +118,8 @@ namespace CheckCATool
             string selectedFolderName = cbCaTrustStore.SelectedItem.ToString(); // Rút ra chữ "VNPT" chẳng hạn
             ClearLabels(); // Xóa sạch kết quả cũ của lần test trước đó
             btnCheckCa.Enabled = false;
+            label8.Text = "Hệ thống đang xử lý\nVui lòng chờ trong giây lát...";
+            label8.ForeColor = Color.Red;
 
             try
             {
@@ -135,31 +137,31 @@ namespace CheckCATool
                     // === PHÂN CHIA ĐỀU NỘI DUNG RA CÁC LABEL ===
 
                     // LABLE 2: Đơn vị định danh CA
-                    label2.Text = $"1. Nhà cung cấp phát hành: {result.CaProvider}";
+                    label2.Text = $"1. Nhà cung cấp: {result.CaProvider}";
                     label2.ForeColor = System.Drawing.Color.DarkBlue;
 
                     // LABLE 3: Chuỗi Subject đầy đủ của CA
-                    label3.Text = $"2. Thống kê thông tin CA: {result.Subject}";
+                    label3.Text = $"2. Thông tin CA: {result.Subject}";
                     label3.ForeColor = System.Drawing.Color.Black;
 
                     // LABLE 4: Mã Serial Number của CA (Định dạng viết hoa)
-                    label4.Text = $"3. Mã Serial Number: {result.SerialNumber.ToUpper()}";
+                    label4.Text = $"3. Serial Number: {result.SerialNumber.ToUpper()}";
                     label4.ForeColor = System.Drawing.Color.DimGray;
 
                     // LABLE 5: Thời hạn vận hành hệ thống CA kèm logic cảnh báo quá hạn
                     if (result.CaValidityStatus == "EXPIRED")
                     {
-                        label5.Text = $"4. Thời hạn chứng chỉ: Hết hạn lúc {result.ValidTo} (* CA NÀY ĐÃ CHẾT/QUÁ HẠN!)";
+                        label5.Text = $"4. Thời hạn chứng chỉ: Hết hạn lúc {result.ValidTo} (* CA ĐÃ QUÁ HẠN!)";
                         label5.ForeColor = System.Drawing.Color.Red;
                     }
                     else
                     {
-                        label5.Text = $"4. Thời hạn chứng chỉ: Từ [{result.ValidFrom}] đến [{result.ValidTo}]";
+                        label5.Text = $"4. Thời hạn chứng chỉ: Từ {result.ValidFrom} đến {result.ValidTo}";
                         label5.ForeColor = System.Drawing.Color.Black;
                     }
 
                     // LABLE 6: Kết quả phân tích đường truyền danh sách thu hồi CRL
-                    label6.Text = $"5. Cổng kiểm tra tĩnh CRL: {result.CrlStatus}";
+                    label6.Text = $"5. Trạng thái CRL: {result.CrlStatus}";
                     if (result.CrlStatus.Contains("VALID"))
                     {
                         label6.ForeColor = System.Drawing.Color.Green;
@@ -170,7 +172,7 @@ namespace CheckCATool
                     }
 
                     // LABLE 7: Kết quả truy vấn máy chủ phản hồi trực tuyến OCSP
-                    label7.Text = $"6. Cổng trực tuyến OCSP: {result.OcspStatus}";
+                    label7.Text = $"6. Trạng thái OCSP: {result.OcspStatus}";
                     if (result.OcspStatus.Contains("GOOD") || result.OcspStatus.Contains("VALID"))
                     {
                         label7.ForeColor = System.Drawing.Color.Green;
@@ -180,7 +182,7 @@ namespace CheckCATool
                         label7.ForeColor = System.Drawing.Color.OrangeRed;
                     }
 
-                    // In log JSON thô ra ô textbox lớn (nếu ông có dùng ô hiển thị log thô)
+                    // In log JSON thô ra ô textbox lớn 
                     //txtResult.Text = JToken.Parse(jsonResponse).ToString(Formatting.Indented);
                 }
                 else
@@ -196,6 +198,7 @@ namespace CheckCATool
             finally
             {
                 btnCheckCa.Enabled = true;
+                label8.Text = string.Empty;
             }
         }
 

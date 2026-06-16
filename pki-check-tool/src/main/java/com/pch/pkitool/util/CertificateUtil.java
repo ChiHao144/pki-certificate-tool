@@ -13,25 +13,17 @@ public class CertificateUtil {
             // Ưu tiên lấy trường O (Organization - Tên tổ chức) trước
             var orgs = x500Name.getRDNs(BCStyle.O);
             if (orgs.length > 0) {
-                return formatProviderName(IETFUtils.valueToString(orgs[0].getFirst().getValue()).toUpperCase());
+                return IETFUtils.valueToString(orgs[0].getFirst().getValue()).toUpperCase();
             }
 
             var cns = x500Name.getRDNs(BCStyle.CN);
             if (cns.length > 0) {
-                return formatProviderName(IETFUtils.valueToString(cns[0].getFirst().getValue()).toUpperCase());
+                return IETFUtils.valueToString(cns[0].getFirst().getValue()).toUpperCase();
             }
 
             return "UNKNOWN_CA";
         } catch (Exception e) {
             return "UNKNOWN_CA";
         }
-    }
-
-    public static String formatProviderName(String rawName) {
-        if (rawName == null || rawName.isBlank()) {
-            return "UNKNOWN_CA";
-        }
-        return rawName.trim()
-                .replaceAll("\\s+", "_").toUpperCase();
-    }
+    } 
 }

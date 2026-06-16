@@ -1,0 +1,1 @@
+openssl ocsp -issuer EFY_SHA2.cer -CAfile EFY_SHA2.cer -cert KH_EFY.cer -text -url http://ocsp.efyca.vn

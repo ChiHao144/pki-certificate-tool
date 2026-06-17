@@ -40,11 +40,11 @@ public class CertificateService {
             Security.addProvider(new BouncyCastleProvider());
         }
     }
-    
+
     // Hàm bóc tách, đối sánh toán học và kiểm tra trạng thái mạng của cặp file ca.cer và user.cer theo thư mục
     public CertificateInfoResponse processCaAndUserFromFolder(String caName) throws Exception {
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
-        
+
         // 1. Định vị đường dẫn vật lý chính xác tới 2 file nằm trong thư mục DataCrlOcsp/{caName}
         File userFileSource = new File("DataCrlOcsp/" + caName + "/user.cer");
         File caFileSource = new File("DataCrlOcsp/" + caName + "/ca.cer");
@@ -75,9 +75,14 @@ public class CertificateService {
         dto.setValidTo(finalCaCert.getNotAfter().toString()); // Lấy ngày hết hạn của chính CA đó
         dto.setCaProvider(CertificateUtil.detectCAProvider(finalCaCert.getSubjectX500Principal().toString()));
 
+        // ==================== BỔ SUNG THÊM THÔNG TIN USER ====================
+        dto.setUserSubject(cert.getSubjectX500Principal().toString());       // Lấy tên khách hàng
+        dto.setUserSerialNumber(cert.getSerialNumber().toString(16));// Lấy Serial CTS khách hàng
+        dto.setUserValidTo(cert.getNotAfter().toString());                  // Lấy ngày hết hạn CTS khách hàng
+        // =====================================================================
+
         // ==================== KHỐI LỆNH CHỐT CHẶN BẢO VỆ CẤU TRÚC ====================
         // Đề phòng trường hợp ông hoặc người dùng chép nhầm/đổi tên file lộn xộn trong thư mục
-        
         // Chặn 1: Nếu file đặt tên là ca.cer thực chất bên trong lõi lại là file User thông thường
         if (finalCaCert.getBasicConstraints() == -1) {
             dto.setCaValidityStatus("INVALID_CA_FILE_IS_USER");
@@ -103,17 +108,24 @@ public class CertificateService {
         } catch (CertificateExpiredException | CertificateNotYetValidException e) {
             dto.setCaValidityStatus("EXPIRED"); // CA đã quá hạn sử dụng
         }
-
-        // 6. KIỂM TRA TOÁN HỌC PHÂN CẤP: Dùng Public Key của ca.cer giải mã chữ ký số trên user.cer
+        
         try {
-            cert.verify(finalCaCert.getPublicKey());
-            dto.setCertValidityStatus("MATCHED_CHAIN"); // Chuỗi ký số trùng khớp hoàn toàn
-        } catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException | CertificateException e) {
-            dto.setCertValidityStatus("MISMATCHED_CA_CHAIN"); // Lỗi: file ca.cer này không phải là thằng đã ký ra file user.cer này!
-            dto.setCrlStatus("SIGNATURE_VERIFICATION_FAILED");
-            dto.setOcspStatus("SIGNATURE_VERIFICATION_FAILED");
-            return dto; // Chặn đứng tại đây, không cho truy vấn mạng bừa bãi
+            cert.checkValidity(now);
+            dto.setCertValidityStatus("VALID");
+        } catch (CertificateExpiredException | CertificateNotYetValidException e) {
+            dto.setCertValidityStatus("EXPIRED"); //đã quá hạn sử dụng
         }
+        
+        // 6. KIỂM TRA TOÁN HỌC PHÂN CẤP: Dùng Public Key của ca.cer giải mã chữ ký số trên user.cer
+//        try {
+//            cert.verify(finalCaCert.getPublicKey());
+//            dto.setCertValidityStatus("MATCHED_CHAIN"); // Chuỗi ký số trùng khớp hoàn toàn
+//        } catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException | CertificateException e) {
+//            dto.setCertValidityStatus("MISMATCHED_CA_CHAIN"); // Lỗi: file ca.cer này không phải là thằng đã ký ra file user.cer này!
+//            dto.setCrlStatus("SIGNATURE_VERIFICATION_FAILED");
+//            dto.setOcspStatus("SIGNATURE_VERIFICATION_FAILED");
+//            return dto; // Chặn đứng tại đây, không cho truy vấn mạng bừa bãi
+//        }
 
         // 7. KÍCH HOẠT ĐƯỜNG TRUYỀN INTERNET: Gửi lệnh kiểm thử cổng thu hồi trạng thái của nhà mạng này
         dto.setCrlStatus(crlService.checkCRL(cert, finalCaCert, cf, dto)); // Kiểm tra qua file .crl tĩnh

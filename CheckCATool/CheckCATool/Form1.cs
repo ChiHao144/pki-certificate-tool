@@ -36,17 +36,20 @@ namespace CheckCATool
             label6.Text = "";
             label7.Text = "";
             label8.Text = "";
+            label9.Text = "";
+            label10.Text = "";
+            label11.Text = "";
         }
         private async void Form1_Load(object sender, EventArgs e)
         {
             try
             {
                 // Khởi động Server Spring Boot ngầm chạy song song
-                System.Diagnostics.Process startJava = new System.Diagnostics.Process();
-                startJava.StartInfo.FileName = "JavaBackend.exe";
-                startJava.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-                startJava.StartInfo.CreateNoWindow = true;
-                startJava.Start();
+                //System.Diagnostics.Process startJava = new System.Diagnostics.Process();
+                //startJava.StartInfo.FileName = "JavaBackend.exe";
+                //startJava.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+                //startJava.StartInfo.CreateNoWindow = true;
+                //startJava.Start();
 
                 // Chờ 2 giây để đảm bảo Spring Boot khởi động xong cổng 8080 rồi mới nạp ComboBox
                 await Task.Delay(2000);
@@ -78,8 +81,8 @@ namespace CheckCATool
 
                     if (cbCaTrustStore.Items.Count > 0)
                     {
-                        cbCaTrustStore.SelectedIndex = -1; // Không chọn sẵn phần tử đầu tiên 
-                        cbCaTrustStore.Text = "--Chọn CA--";
+                        cbCaTrustStore.Items.Insert(0, "--Chọn CA--");
+                        cbCaTrustStore.SelectedIndex = 0;
                     }
                     else
                     {
@@ -109,7 +112,7 @@ namespace CheckCATool
 
         private async void btnCheckCa_Click(object sender, EventArgs e)
         {
-            if (cbCaTrustStore.SelectedItem == null)
+            if (cbCaTrustStore.SelectedItem == null || cbCaTrustStore.SelectedIndex == 0)
             {
                 MessageBox.Show("Vui lòng chọn một cấu trúc CA hệ thống để kiểm tra!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -120,6 +123,7 @@ namespace CheckCATool
             btnCheckCa.Enabled = false;
             label8.Text = "Hệ thống đang xử lý\nVui lòng chờ trong giây lát...";
             label8.ForeColor = Color.Red;
+            
 
             try
             {
@@ -182,6 +186,32 @@ namespace CheckCATool
                         label7.ForeColor = System.Drawing.Color.OrangeRed;
                     }
 
+                    string displayName = result.UserSubject;
+                    if (result.UserSubject.Contains("CN="))
+                    {
+                        string[] parts = result.UserSubject.Split(',');
+                        string cnPart = parts.FirstOrDefault(p => p.Trim().StartsWith("CN="));
+                        if (cnPart != null) displayName = cnPart.Replace("CN=", "").Trim();
+                    }
+                    label9.Text = $"Tên khách hàng (Chủ thể): {displayName}";
+                    label9.ForeColor = Color.DarkBlue;
+
+                    // Trường 2: Hiển thị mã định danh Serial của User Cert (Viết hoa cho chuẩn IT)
+                    label10.Text = $"Mã Serial định danh CTS: {result.UserSerialNumber.ToUpper()}";
+                    label10.ForeColor = Color.Black;
+
+                    // Trường 3: Hiển thị ngày hết hạn của User Cert kèm logic đổi màu đỏ nếu đã hết hạn
+                    if (result.CertValidityStatus == "EXPIRED")
+                    {
+                        label11.Text = $"Hạn dùng CTS khách hàng: {result.UserValidTo} (* ĐÃ HẾT HẠN SỬ DỤNG!)";
+                        label11.ForeColor = Color.Red;
+                    }
+                    else
+                    {
+                        label11.Text = $"Hạn dùng CTS khách hàng: {result.UserValidTo} (Đang hoạt động)";
+                        label11.ForeColor = Color.Green;
+                    }
+
                     // In log JSON thô ra ô textbox lớn 
                     //txtResult.Text = JToken.Parse(jsonResponse).ToString(Formatting.Indented);
                 }
@@ -216,5 +246,6 @@ namespace CheckCATool
         {
 
         }
+
     }
 }

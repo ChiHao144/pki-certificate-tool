@@ -18,6 +18,9 @@ public class CertificateInfoResponse {
     private String certValidityStatus;
     private String caValidityStatus;
     private String crlValidityStatus;
+    private String userSubject;
+    private String userSerialNumber;
+    private String userValidTo;
 
     /**
      * @return the subject
@@ -171,5 +174,47 @@ public class CertificateInfoResponse {
      */
     public void setCrlValidityStatus(String crlValidityStatus) {
         this.crlValidityStatus = crlValidityStatus;
+    }
+
+    /**
+     * @return the userSubject
+     */
+    public String getUserSubject() {
+        return userSubject;
+    }
+
+    /**
+     * @param userSubject the userSubject to set
+     */
+    public void setUserSubject(String userSubject) {
+        this.userSubject = userSubject;
+    }
+
+    /**
+     * @return the userSerialNumber
+     */
+    public String getUserSerialNumber() {
+        return userSerialNumber;
+    }
+
+    /**
+     * @param userSerialNumber the userSerialNumber to set
+     */
+    public void setUserSerialNumber(String userSerialNumber) {
+        this.userSerialNumber = userSerialNumber;
+    }
+
+    /**
+     * @return the userValidTo
+     */
+    public String getUserValidTo() {
+        return userValidTo;
+    }
+
+    /**
+     * @param userValidTo the userValidTo to set
+     */
+    public void setUserValidTo(String userValidTo) {
+        this.userValidTo = userValidTo;
     }
 }

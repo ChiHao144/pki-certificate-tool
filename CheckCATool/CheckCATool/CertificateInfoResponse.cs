@@ -19,5 +19,8 @@ namespace CheckCATool
         public string CertValidityStatus { get; set; }
         public string CaValidityStatus { get; set; }
         public string CrlValidityStatus { get; set; }
+        public string UserSubject { get; set; }
+        public string UserSerialNumber { get; set; }
+        public string UserValidTo { get; set; }
     }
 }

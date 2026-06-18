@@ -5,6 +5,8 @@ import com.pch.pkitool.util.CertificateUtil;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -19,6 +21,7 @@ import java.util.Date;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  *
@@ -45,7 +48,7 @@ public class CertificateService {
     public CertificateInfoResponse processCaAndUserFromFolder(String caName) throws Exception {
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
 
-        // 1. Định vị đường dẫn vật lý chính xác tới 2 file nằm trong thư mục DataCrlOcsp/{caName}
+        // Định vị đường dẫn vật lý chính xác tới 2 file nằm trong thư mục DataCrlOcsp/{caName}
         File userFileSource = new File("DataCrlOcsp/" + caName + "/user.cer");
         File caFileSource = new File("DataCrlOcsp/" + caName + "/ca.cer");
 
@@ -54,19 +57,19 @@ public class CertificateService {
             throw new FileNotFoundException("Thiếu file cấu trúc chứng chỉ chuẩn.");
         }
 
-        // 2. Nạp file user.cer từ ổ cứng lên RAM và phân dịch thành đối tượng cấu trúc X509
+        // Nạp file user.cer từ ổ cứng lên RAM và phân dịch thành đối tượng cấu trúc X509
         X509Certificate cert;
         try (FileInputStream fisUser = new FileInputStream(userFileSource)) {
             cert = (X509Certificate) cf.generateCertificate(fisUser);
         }
 
-        // 3. Nạp file ca.cer từ ổ cứng lên RAM và phân dịch thành đối tượng cấu trúc X509
+        // Nạp file ca.cer từ ổ cứng lên RAM và phân dịch thành đối tượng cấu trúc X509
         X509Certificate finalCaCert;
         try (FileInputStream fisCa = new FileInputStream(caFileSource)) {
             finalCaCert = (X509Certificate) cf.generateCertificate(fisCa);
         }
 
-        // 4. Khởi tạo thùng chứa dữ liệu phản hồi đổ thông tin thô của CA ra hiển thị sức khỏe
+        // Khởi tạo thùng chứa dữ liệu phản hồi đổ thông tin thô của CA ra hiển thị sức khỏe
         CertificateInfoResponse dto = new CertificateInfoResponse();
         dto.setSubject(finalCaCert.getSubjectX500Principal().toString());
         dto.setIssuer(finalCaCert.getIssuerX500Principal().toString());
@@ -101,36 +104,122 @@ public class CertificateService {
 
         Date now = new Date();
 
-        // 5. Kiểm tra thời hạn vận hành của nhà mạng CA xem còn sống hay chết
+        // Kiểm tra thời hạn vận hành của nhà mạng CA xem còn sống hay chết
         try {
             finalCaCert.checkValidity(now);
             dto.setCaValidityStatus("VALID");
         } catch (CertificateExpiredException | CertificateNotYetValidException e) {
             dto.setCaValidityStatus("EXPIRED"); // CA đã quá hạn sử dụng
         }
-        
+
         try {
             cert.checkValidity(now);
             dto.setCertValidityStatus("VALID");
         } catch (CertificateExpiredException | CertificateNotYetValidException e) {
             dto.setCertValidityStatus("EXPIRED"); //đã quá hạn sử dụng
         }
-        
-        // 6. KIỂM TRA TOÁN HỌC PHÂN CẤP: Dùng Public Key của ca.cer giải mã chữ ký số trên user.cer
-//        try {
-//            cert.verify(finalCaCert.getPublicKey());
-//            dto.setCertValidityStatus("MATCHED_CHAIN"); // Chuỗi ký số trùng khớp hoàn toàn
-//        } catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException | CertificateException e) {
-//            dto.setCertValidityStatus("MISMATCHED_CA_CHAIN"); // Lỗi: file ca.cer này không phải là thằng đã ký ra file user.cer này!
-//            dto.setCrlStatus("SIGNATURE_VERIFICATION_FAILED");
-//            dto.setOcspStatus("SIGNATURE_VERIFICATION_FAILED");
-//            return dto; // Chặn đứng tại đây, không cho truy vấn mạng bừa bãi
-//        }
 
-        // 7. KÍCH HOẠT ĐƯỜNG TRUYỀN INTERNET: Gửi lệnh kiểm thử cổng thu hồi trạng thái của nhà mạng này
+        // KÍCH HOẠT ĐƯỜNG TRUYỀN INTERNET: Gửi lệnh kiểm thử cổng thu hồi trạng thái của nhà mạng này
         dto.setCrlStatus(crlService.checkCRL(cert, finalCaCert, cf, dto)); // Kiểm tra qua file .crl tĩnh
         dto.setOcspStatus(ocspService.checkOCSP(cert, finalCaCert));       // Kiểm tra qua máy chủ trực tuyến OCSP
 
         return dto;
+    }
+
+    // Logic xử lý kiểm tra file user.cer tạm thời từ RAM
+    public CertificateInfoResponse checkTemporaryUserCert(String caName, MultipartFile file) throws Exception {
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File nạp lên bị rỗng.");
+        }
+
+        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+        File caFileSource = new File("DataCrlOcsp/" + caName + "/ca.cer");
+
+        if (!caFileSource.exists()) {
+            throw new FileNotFoundException("Không tìm thấy cấu trúc CA hệ thống tương ứng.");
+        }
+
+        // Nạp file user từ bộ nhớ tạm
+        X509Certificate cert;
+        try (InputStream is = file.getInputStream()) {
+            cert = (X509Certificate) cf.generateCertificate(is);
+        }
+
+        // Nạp file ca.cer từ ổ cứng
+        X509Certificate finalCaCert;
+        try (FileInputStream fisCa = new FileInputStream(caFileSource)) {
+            finalCaCert = (X509Certificate) cf.generateCertificate(fisCa);
+        }
+
+        // Chọn file vào ô thêm mới user thực chất lại là file CA (BasicConstraints != -1)
+        if (cert.getBasicConstraints() != -1) {
+            throw new IllegalArgumentException("Tệp tải lên là một chứng chỉ CA, không phải là chứng chỉ User\nVui lòng chọn đúng tệp User!");
+        }
+
+        // KIỂM TRA TOÁN HỌC PHÂN CẤP (Xác thực chuỗi ký số - Chain Verification)
+        // Dùng Public Key của file ca.cer hiện tại để giải mã chữ ký số trên file user.cer mới nạp
+        try {
+            cert.verify(finalCaCert.getPublicKey());
+        } catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException | CertificateException e) { 
+            throw new IllegalArgumentException("Chứng chỉ User này KHÔNG THUỘC VỀ hệ thống CA hiện tại\nVui lòng chọn đúng User trùng khớp với CA!");
+        }
+
+        // Điền dữ liệu vào DTO
+        CertificateInfoResponse dto = new CertificateInfoResponse();
+        dto.setSubject(finalCaCert.getSubjectX500Principal().toString());
+        dto.setIssuer(finalCaCert.getIssuerX500Principal().toString());
+        dto.setSerialNumber(finalCaCert.getSerialNumber().toString(16));
+        dto.setValidFrom(finalCaCert.getNotBefore().toString());
+        dto.setValidTo(finalCaCert.getNotAfter().toString());
+        dto.setCaProvider(CertificateUtil.detectCAProvider(finalCaCert.getSubjectX500Principal().toString()));
+
+        dto.setUserSubject(cert.getSubjectX500Principal().toString());
+        dto.setUserSerialNumber(cert.getSerialNumber().toString(16));
+        dto.setUserValidTo(cert.getNotAfter().toString());
+
+        if (finalCaCert.getBasicConstraints() == -1) {
+            dto.setCaValidityStatus("INVALID_CA_FILE_IS_USER");
+            return dto;
+        }
+        if (cert.getBasicConstraints() != -1) {
+            dto.setCertValidityStatus("INVALID_USER_FILE_IS_CA");
+            return dto;
+        }
+
+        Date now = new Date();
+        // Kiểm tra thời hạn vận hành của nhà mạng CA xem còn sống hay chết
+        try {
+            finalCaCert.checkValidity(now);
+            dto.setCaValidityStatus("VALID");
+        } catch (CertificateExpiredException | CertificateNotYetValidException e) {
+            dto.setCaValidityStatus("EXPIRED"); // CA đã quá hạn sử dụng
+        }
+
+        try {
+            cert.checkValidity(now);
+            dto.setCertValidityStatus("VALID");
+        } catch (CertificateExpiredException | CertificateNotYetValidException e) {
+            dto.setCertValidityStatus("EXPIRED"); //đã quá hạn sử dụng
+        }
+
+        // Kiểm tra trạng thái trực tuyến
+        dto.setCrlStatus(crlService.checkCRL(cert, finalCaCert, cf, dto));
+        dto.setOcspStatus(ocspService.checkOCSP(cert, finalCaCert));
+
+        return dto;
+    }
+
+    // Logic lưu đè file vật lý vào ổ cứng
+    public void saveUserCertificate(String caName, MultipartFile file) throws Exception {
+        File targetFolder = new File("DataCrlOcsp/" + caName);
+        if (!targetFolder.exists()) {
+            throw new FileNotFoundException("Thư mục CA không tồn tại.");
+        }
+
+        File userFile = new File(targetFolder, "user.cer");
+        // Ghi dữ liệu byte vào file
+        try (FileOutputStream fos = new FileOutputStream(userFile)) {
+            fos.write(file.getBytes());
+        }
     }
 }

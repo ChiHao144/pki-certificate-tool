@@ -225,9 +225,12 @@ public class CertificateService {
     }
 
     // Thêm mới CA chưa có vào kho lưu trữ 
-    public String addNewCaCertificate(MultipartFile file) throws Exception {
+    public String addNewCaCertificate(MultipartFile file, String caName) throws Exception {
         if (file.isEmpty()) {
             throw new IllegalArgumentException("File chứng chỉ CA nạp lên bị rỗng.");
+        }
+        if (caName == null || caName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Tên nhà cung cấp CA không được để trống.");
         }
 
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
@@ -244,15 +247,7 @@ public class CertificateService {
             throw new IllegalArgumentException("Tệp tải lên là user certificate, không phải CA\nVui lòng chọn đúng file CA!");
         }
 
-        // 2. TỰ ĐỘNG LỌC LẤY TÊN CA (Dùng hàm tiện ích sẵn có của bạn)
-        String subjectDN = caCert.getSubjectX500Principal().toString();
-        String caName = CertificateUtil.detectCAProvider(subjectDN);
-
-        if ("UNKNOWN_CA".equals(caName) || caName.trim().isEmpty()) {
-            throw new IllegalArgumentException("Không thể nhận diện danh tính Tên nhà cung cấp (CA Provider) từ tệp này.");
-        }
-
-        // Chuẩn hóa tên thư mục (bỏ khoảng trắng, ký tự đặc biệt nếu cần, hoặc giữ nguyên viết hoa)
+        // 2. Chuẩn hóa tên thư mục do người dùng nhập (bỏ khoảng trắng và thay thế bằng dấu gạch dưới)
         caName = caName.trim().replace(" ", "_");
 
         // 3. KIỂM TRA CHỐT CHẶN 2: Kiểm tra thư mục CA này đã tồn tại chưa

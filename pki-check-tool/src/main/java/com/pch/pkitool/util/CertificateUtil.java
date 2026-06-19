@@ -82,6 +82,7 @@ public class CertificateUtil {
         }
     }
 
+    // Lấy URL tải CA từ thông tin AIA trong file user.cer
     public static String getCaIssuerUrl(X509Certificate cert) {
         try {
             byte[] extVal = cert.getExtensionValue("1.3.6.1.5.5.7.1.1"); // authorityInfoAccess OID
@@ -104,6 +105,7 @@ public class CertificateUtil {
         return null;
     }
 
+    // Download file từ URL
     public static byte[] downloadFile(String urlStr) throws Exception {
         URL url = new URI(urlStr).toURL();
         try (InputStream in = url.openStream(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {

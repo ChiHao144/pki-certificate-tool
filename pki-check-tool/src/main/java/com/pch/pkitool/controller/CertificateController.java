@@ -39,8 +39,7 @@ public class CertificateController {
             if (folders != null) {
                 for (File folder : folders) {
                     File[] cerFiles = folder.listFiles(
-                            (dir, name) -> name.toLowerCase().endsWith(".cer")
-                    );
+                            (dir, name) -> name.toLowerCase().endsWith(".cer"));
                     if (cerFiles != null && cerFiles.length > 0) {
                         caList.add(folder.getName());
                     }
@@ -78,7 +77,8 @@ public class CertificateController {
     @PostMapping("/check-by-folder/{caName}")
     public ResponseEntity<?> checkCertificateByFolder(@PathVariable String caName) {
         try {
-            // Gọi xuống Service để bóc tách cặp file ca.cer và user.cer trong thư mục caName
+            // Gọi xuống Service để bóc tách cặp file ca.cer và user.cer trong thư mục
+            // caName
             CertificateInfoResponse response = certificateService.processCaAndUserFromFolder(caName);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -86,9 +86,11 @@ public class CertificateController {
         }
     }
 
-    // API thực hiện kiểm tra user.cer mới nạp cùng ca.cer đã chọn cho kết quả crl ocsp
+    // API thực hiện kiểm tra user.cer mới nạp, cùng ca.cer đã chọn cho kết quả crl
+    // ocsp
     @PostMapping("/check-temp/{caName}")
-    public ResponseEntity<?> checkTemporaryUserCert(@PathVariable String caName, @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<?> checkTemporaryUserCert(@PathVariable String caName,
+            @RequestParam("file") MultipartFile file) {
         try {
             CertificateInfoResponse response = certificateService.checkTemporaryUserCert(caName, file);
             return ResponseEntity.ok(response);
@@ -101,7 +103,8 @@ public class CertificateController {
 
     // API thực hiện áp dụng ghi đè file
     @PostMapping("/save-user/{caName}")
-    public ResponseEntity<?> saveUserCertificate(@PathVariable String caName, @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<?> saveUserCertificate(@PathVariable String caName,
+            @RequestParam("file") MultipartFile file) {
         try {
             certificateService.saveUserCertificate(caName, file);
             return ResponseEntity.ok("Cập nhật file user.cer thành công!");
@@ -114,9 +117,11 @@ public class CertificateController {
 
     // Thêm API này vào trong CertificateController.java
     @PostMapping("/add-new-ca")
-    public ResponseEntity<?> addNewCaCertificate(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<?> addNewCaCertificate(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("name") String caName) {
         try {
-            String createdCaName = certificateService.addNewCaCertificate(file);
+            String createdCaName = certificateService.addNewCaCertificate(file, caName);
             return ResponseEntity.ok("Thêm mới nhà cung cấp CA " + createdCaName + " thành công!");
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

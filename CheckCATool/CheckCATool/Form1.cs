@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -47,11 +47,11 @@ namespace CheckCATool
             try
             {
                 // Khởi động Server Spring Boot ngầm chạy song song
-                //System.Diagnostics.Process startJava = new System.Diagnostics.Process();
-                //startJava.StartInfo.FileName = "JavaBackend.exe";
-                //startJava.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-                //startJava.StartInfo.CreateNoWindow = true;
-                //startJava.Start();
+                System.Diagnostics.Process startJava = new System.Diagnostics.Process();
+                startJava.StartInfo.FileName = "JavaBackend.exe";
+                startJava.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+                startJava.StartInfo.CreateNoWindow = true;
+                startJava.Start();
 
                 // Chờ 2 giây để đảm bảo Spring Boot khởi động xong cổng 8080 rồi mới nạp ComboBox
                 await Task.Delay(2000);
@@ -430,6 +430,13 @@ namespace CheckCATool
                 {
                     string filePath = ofd.FileName;
 
+                    string caName = ShowPrompt("Nhập tên nhà cung cấp CA (ví dụ: VNPT, Viettel...):", "Cấu hình tên CA");
+                    if (string.IsNullOrWhiteSpace(caName))
+                    {
+                        MessageBox.Show("Tên nhà cung cấp CA không được để trống!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
                     // Dọn dẹp giao diện và hiển thị trạng thái chờ xử lý đồ họa trực quan
                     ClearLabels();
                     btnAddCaNew.Enabled = false;
@@ -449,6 +456,9 @@ namespace CheckCATool
 
                             // Gắn vào tham số "file" khớp với @RequestParam("file") của Spring Boot
                             content.Add(fileContent, "file", Path.GetFileName(filePath));
+
+                            // Gắn vào tham số "name" khớp với @RequestParam("name") của Spring Boot
+                            content.Add(new StringContent(caName, Encoding.UTF8), "name");
 
                             // Gọi API thêm mới CA
                             string apiUrl = "http://localhost:8080/certificate/add-new-ca";
@@ -522,5 +532,32 @@ namespace CheckCATool
                 MessageBox.Show("Không thể tự động đồng bộ lại danh sách CA mới: " + ex.Message, "Lỗi đồng bộ UI", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
+
+        // Hộp thoại popup lấy input từ người dùng
+        private static string ShowPrompt(string text, string caption)
+        {
+            System.Windows.Forms.Form prompt = new System.Windows.Forms.Form()
+            {
+                Width = 400,
+                Height = 180,
+                FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog,
+                Text = caption,
+                StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+            System.Windows.Forms.Label textLabel = new System.Windows.Forms.Label() { Left = 20, Top = 20, Width = 360, Text = text, Font = new Font("Calibri", 11) };
+            System.Windows.Forms.TextBox textBox = new System.Windows.Forms.TextBox() { Left = 20, Top = 50, Width = 340, Font = new Font("Calibri", 11) };
+            System.Windows.Forms.Button confirmation = new System.Windows.Forms.Button() { Text = "Ok", Left = 260, Width = 100, Top = 90, DialogResult = System.Windows.Forms.DialogResult.OK, Font = new Font("Calibri", 11) };
+            confirmation.Click += (sender, e) => { prompt.Close(); };
+            prompt.Controls.Add(textBox);
+            prompt.Controls.Add(confirmation);
+            prompt.Controls.Add(textLabel);
+            prompt.AcceptButton = confirmation;
+
+            return prompt.ShowDialog() == System.Windows.Forms.DialogResult.OK ? textBox.Text : "";
+        }
+
+      
     }
 }

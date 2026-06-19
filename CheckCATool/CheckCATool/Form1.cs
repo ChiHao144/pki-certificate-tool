@@ -125,6 +125,7 @@ namespace CheckCATool
             btnCheckCa.Enabled = false;
             label8.Text = "Hệ thống đang xử lý\nVui lòng chờ trong giây lát...";
             label8.ForeColor = Color.Red;
+            txtUserCert.Text =  String.Empty;
 
 
             try
@@ -268,6 +269,7 @@ namespace CheckCATool
                 if (ofd.ShowDialog() == DialogResult.OK)
                 {
                     string filePath = ofd.FileName;
+                    txtUserCert.Text = ofd.FileName;
 
                     // Chuẩn bị giao diện trước khi gọi API
                     ClearLabels();
@@ -299,7 +301,7 @@ namespace CheckCATool
                             // Bước 4: Gọi API 1 - Kiểm tra tạm thời cấu trúc chứng chỉ trên RAM
                             string checkUrl = $"http://localhost:8080/certificate/check-temp/{selectedFolderName}";
                             HttpResponseMessage response = await client.PostAsync(checkUrl, content);
-                            
+
                             label8.Text = string.Empty;
                             label8.Refresh();
 
@@ -394,7 +396,7 @@ namespace CheckCATool
                                 if (dialogResult == DialogResult.No)
                                 {
                                     ClearLabels();
-                                }    
+                                }
                             }
                             else
                             {
@@ -414,6 +416,110 @@ namespace CheckCATool
                         label8.Text = string.Empty;
                     }
                 }
+            }
+        }
+
+        private async void btnAddCaNew_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog ofd = new OpenFileDialog())
+            {
+                ofd.Filter = "Certificate Files (*.cer;*.crt)|*.cer;*.crt|All files (*.*)|*.*";
+                ofd.Title = "Chọn tệp chứng chỉ CA gốc/trung gian mới cần cấu hình";
+
+                if (ofd.ShowDialog() == DialogResult.OK)
+                {
+                    string filePath = ofd.FileName;
+
+                    // Dọn dẹp giao diện và hiển thị trạng thái chờ xử lý đồ họa trực quan
+                    ClearLabels();
+                    btnAddCaNew.Enabled = false;
+                    label8.Text = "Hệ thống đang xử lý\nVui lòng chờ trong giây lát...";
+                    label8.ForeColor = Color.Red;
+                    label8.Refresh(); // Ép WinForms xóa vẽ ngay lập tức
+
+                    try
+                    {
+                        // Đọc file sang mảng byte nhị phân
+                        byte[] fileBytes = File.ReadAllBytes(filePath);
+
+                        using (var content = new MultipartFormDataContent())
+                        {
+                            var fileContent = new ByteArrayContent(fileBytes);
+                            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+
+                            // Gắn vào tham số "file" khớp với @RequestParam("file") của Spring Boot
+                            content.Add(fileContent, "file", Path.GetFileName(filePath));
+
+                            // Gọi API thêm mới CA
+                            string apiUrl = "http://localhost:8080/certificate/add-new-ca";
+                            HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+
+                            // Xóa chữ trạng thái đỏ/xanh ngay khi nhận được phản hồi, tránh treo đồ họa
+                            label8.Text = string.Empty;
+                            label8.Refresh();
+
+                            if (response.IsSuccessStatusCode)
+                            {
+                                string successMsg = await response.Content.ReadAsStringAsync();
+                                MessageBox.Show(successMsg, "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                                // ĐIỂM SÁNG: Tái nạp lại danh sách ComboBox tự động
+                                // Đoạn này gọi lại luồng nạp giống hệt trong Form1_Load giúp cập nhật UI tức thì
+                                await ReloadCaComboBox();
+                            }
+                            else
+                            {
+                                // Bắt trọn các lỗi: "Tệp là chứng chỉ USER", "Hệ thống đã tồn tại nhà cung cấp này..."
+                                string errorMsg = await response.Content.ReadAsStringAsync();
+                                MessageBox.Show(errorMsg, "Lỗi phân cấp chứng chỉ", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        label8.Text = string.Empty;
+                        MessageBox.Show("Lỗi kết nối luồng API hệ thống: " + ex.Message, "Lỗi hạ tầng", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    finally
+                    {
+                        btnAddCaNew.Enabled = true;
+                    }
+                }
+            }
+        }
+
+        // Hàm phụ trợ giúp làm sạch và tải lại dữ liệu cho ComboBox ngay lập tức
+        private async Task ReloadCaComboBox()
+        {
+            try
+            {
+                string url = "http://localhost:8080/certificate/list-ca";
+                // Cấu hình không Cache để HttpClient bắt buộc lấy dữ liệu mới từ ổ cứng Backend vừa ghi
+                client.DefaultRequestHeaders.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue
+                {
+                    NoCache = true,
+                    NoStore = true
+                };
+
+                HttpResponseMessage response = await client.GetAsync(url);
+                if (response.IsSuccessStatusCode)
+                {
+                    string json = await response.Content.ReadAsStringAsync();
+                    List<String> caList = JsonConvert.DeserializeObject<List<String>>(json);
+
+                    cbCaTrustStore.Items.Clear();
+                    cbCaTrustStore.Items.Add("--Chọn CA--");
+
+                    foreach (var ca in caList)
+                    {
+                        cbCaTrustStore.Items.Add(ca);
+                    }
+                    cbCaTrustStore.SelectedIndex = 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Không thể tự động đồng bộ lại danh sách CA mới: " + ex.Message, "Lỗi đồng bộ UI", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
     }

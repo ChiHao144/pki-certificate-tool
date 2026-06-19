@@ -29,7 +29,7 @@ public class CertificateController {
 
     @Autowired
     private CertificateService certificateService;
-    
+
     @GetMapping("/list-ca")
     public ResponseEntity<List<String>> getTrustStoreCaList() {
         List<String> caList = new ArrayList<>();
@@ -49,7 +49,7 @@ public class CertificateController {
         }
         return ResponseEntity.ok(caList);
     }
-    
+
     @GetMapping("/ca/{caName}")
     public ResponseEntity<?> getInfoCa(@PathVariable String caName) {
 
@@ -66,14 +66,14 @@ public class CertificateController {
         }
 
         List<String> certNames = new ArrayList<>();
-        
+
         for (File file : cerFiles) {
             certNames.add(file.getName());
         }
-        
+
         return ResponseEntity.ok(certNames);
     }
-    
+
     // API thực hiện kiểm tra hệ thống dựa trên thư mục CA được chỉ định
     @PostMapping("/check-by-folder/{caName}")
     public ResponseEntity<?> checkCertificateByFolder(@PathVariable String caName) {
@@ -85,7 +85,7 @@ public class CertificateController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi hệ thống ngầm: " + e.getMessage());
         }
     }
-    
+
     // API thực hiện kiểm tra user.cer mới nạp cùng ca.cer đã chọn cho kết quả crl ocsp
     @PostMapping("/check-temp/{caName}")
     public ResponseEntity<?> checkTemporaryUserCert(@PathVariable String caName, @RequestParam("file") MultipartFile file) {
@@ -109,6 +109,34 @@ public class CertificateController {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi ghi file: " + e.getMessage());
+        }
+    }
+
+    // Thêm API này vào trong CertificateController.java
+    @PostMapping("/add-new-ca")
+    public ResponseEntity<?> addNewCaCertificate(@RequestParam("file") MultipartFile file) {
+        try {
+            String createdCaName = certificateService.addNewCaCertificate(file);
+            return ResponseEntity.ok("Thêm mới nhà cung cấp CA " + createdCaName + " thành công!");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Lỗi hệ thống khi khởi tạo dữ liệu CA: " + e.getMessage());
+        }
+    }
+
+    // TÍNH NĂNG MỚI: người dùng đưa user cert tự kết nối với CA của user
+    @PostMapping("/check-auto")
+    public ResponseEntity<?> checkAutoDiscover(@RequestParam("file") MultipartFile file) {
+        try {
+            CertificateInfoResponse response = certificateService.checkAutoDiscover(file);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Lỗi tự động nhận diện CA: " + e.getMessage());
         }
     }
 }

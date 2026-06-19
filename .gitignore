@@ -4,6 +4,7 @@ target/
 bin/
 obj/
 interface-pki-check-tool/
+CheckCertTool/
 *.cer
 *.crt
 *.rar

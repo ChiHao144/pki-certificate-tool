@@ -47,11 +47,16 @@ namespace CheckCATool
             try
             {
                 // Khởi động Server Spring Boot ngầm chạy song song
-                System.Diagnostics.Process startJava = new System.Diagnostics.Process();
-                startJava.StartInfo.FileName = "JavaBackend.exe";
-                startJava.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-                startJava.StartInfo.CreateNoWindow = true;
-                startJava.Start();
+                //System.Diagnostics.Process startJava = new System.Diagnostics.Process();
+                //startJava.StartInfo.FileName = "JavaBackend.exe";
+                //startJava.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+                //startJava.StartInfo.CreateNoWindow = true;
+                //startJava.Start();
+
+                // Hiển thị thông báo trạng thái khởi động dịch vụ nền
+                label8.Text = "Đang kết nối và khởi động\nVui lòng đợi...";
+                label8.ForeColor = Color.Blue;
+                label8.Refresh();
 
                 // Chờ 2 giây để đảm bảo Spring Boot khởi động xong cổng 8080 rồi mới nạp ComboBox
                 await Task.Delay(2000);
@@ -61,6 +66,11 @@ namespace CheckCATool
             {
                 MessageBox.Show("Không tìm thấy tệp core xử lý nền (JavaBackend.exe)! " + ex.Message,
                                 "Lỗi cấu trúc Tool", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                // Xóa trạng thái thông báo khi đã tải xong hoặc gặp lỗi
+                label8.Text = string.Empty;
             }
         }
 
@@ -121,6 +131,30 @@ namespace CheckCATool
             }
 
             string selectedFolderName = cbCaTrustStore.SelectedItem.ToString(); // Rút ra chữ "VNPT" chẳng hạn
+
+            // Kiểm tra xem CA đã có cấu hình chứng chỉ EndUser chưa
+            try
+            {
+                HttpResponseMessage caFilesResponse = await client.GetAsync($"http://localhost:8080/certificate/ca/{selectedFolderName}");
+                if (caFilesResponse.IsSuccessStatusCode)
+                {
+                    string jsonCaFiles = await caFilesResponse.Content.ReadAsStringAsync();
+                    List<string> certFiles = JsonConvert.DeserializeObject<List<string>>(jsonCaFiles);
+                    bool hasUserCert = certFiles != null && certFiles.Any(f => f.Equals("user.cer", StringComparison.OrdinalIgnoreCase));
+                    if (!hasUserCert)
+                    {
+                        MessageBox.Show("Nhà cung cấp CA này hiện chưa có cấu hình chứng chỉ EndUser!\nHệ thống sẽ mở hộp thoại để chọn file chứng chỉ User mới để đối soát.", 
+                                        "Thiếu chứng chỉ EndUser", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        btnAddUserCert_Click(sender, e);
+                        return;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Bỏ qua lỗi và để luồng chính xử lý tiếp
+            }
+
             ClearLabels(); // Xóa sạch kết quả cũ của lần test trước đó
             btnCheckCa.Enabled = false;
             label8.Text = "Hệ thống đang xử lý\nVui lòng chờ trong giây lát...";
@@ -430,13 +464,6 @@ namespace CheckCATool
                 {
                     string filePath = ofd.FileName;
 
-                    string caName = ShowPrompt("Nhập tên nhà cung cấp CA (ví dụ: VNPT, Viettel...):", "Cấu hình tên CA");
-                    if (string.IsNullOrWhiteSpace(caName))
-                    {
-                        MessageBox.Show("Tên nhà cung cấp CA không được để trống!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-
                     // Dọn dẹp giao diện và hiển thị trạng thái chờ xử lý đồ họa trực quan
                     ClearLabels();
                     btnAddCaNew.Enabled = false;
@@ -448,6 +475,75 @@ namespace CheckCATool
                     {
                         // Đọc file sang mảng byte nhị phân
                         byte[] fileBytes = File.ReadAllBytes(filePath);
+
+                        // 1. Kiểm tra tính hợp lệ và sự tồn tại của CA trên hệ thống trước
+                        using (var validateContent = new MultipartFormDataContent())
+                        {
+                            var fileContent = new ByteArrayContent(fileBytes);
+                            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+                            validateContent.Add(fileContent, "file", Path.GetFileName(filePath));
+
+                            string validateUrl = "http://localhost:8080/certificate/validate-new-ca";
+                            HttpResponseMessage validateResponse = await client.PostAsync(validateUrl, validateContent);
+
+                            if (!validateResponse.IsSuccessStatusCode)
+                            {
+                                string errorMsg = await validateResponse.Content.ReadAsStringAsync();
+                                label8.Text = string.Empty;
+                                MessageBox.Show(errorMsg, "Lỗi kiểm tra CA", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                return;
+                            }
+                        }
+
+                        // Xóa chữ trạng thái chờ để người dùng nhập tên nhà cung cấp CA
+                        label8.Text = string.Empty;
+                        label8.Refresh();
+
+                        // Lấy danh sách các CA đã có sẵn trong ComboBox để kiểm tra trùng lặp
+                        List<string> existingCAs = new List<string>();
+                        foreach (var item in cbCaTrustStore.Items)
+                        {
+                            string name = item.ToString();
+                            if (name != "--Chọn CA--")
+                            {
+                                existingCAs.Add(name);
+                            }
+                        }
+
+                        string defaultCaName = "";
+                        try
+                        {
+                            using (var cert = new System.Security.Cryptography.X509Certificates.X509Certificate2(filePath))
+                            {
+                                string cn = cert.GetNameInfo(System.Security.Cryptography.X509Certificates.X509NameType.SimpleName, false);
+                                if (string.IsNullOrEmpty(cn))
+                                {
+                                    cn = Path.GetFileNameWithoutExtension(filePath);
+                                }
+                                // Loại bỏ ký tự không hợp lệ cho tên file/thư mục
+                                foreach (char c in Path.GetInvalidFileNameChars())
+                                {
+                                    cn = cn.Replace(c.ToString(), "");
+                                }
+                                int year = cert.NotAfter.Year;
+                                defaultCaName = $"{cn}_EX_{year}".Replace(" ", "_");
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            defaultCaName = Path.GetFileNameWithoutExtension(filePath);
+                        }
+
+                        string caName = ShowPrompt("Nhập tên nhà cung cấp CA (ví dụ: VNPT, Viettel...):", "Cấu hình tên CA", existingCAs, defaultCaName);
+                        if (string.IsNullOrWhiteSpace(caName))
+                        {
+                            return;
+                        }
+
+                        // Hiển thị lại trạng thái chờ khi thực hiện lưu CA
+                        label8.Text = "Hệ thống đang xử lý\nVui lòng chờ trong giây lát...";
+                        label8.ForeColor = Color.Red;
+                        label8.Refresh();
 
                         using (var content = new MultipartFormDataContent())
                         {
@@ -474,7 +570,7 @@ namespace CheckCATool
                                 MessageBox.Show(successMsg, "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                                 // ĐIỂM SÁNG: Tái nạp lại danh sách ComboBox tự động
-                                // Đoạn này gọi lại luồng nạp giống hệt trong Form1_Load giúp cập nhật UI tức thì
+                                // Đoạn này gọi lại luồng nạp giúp cập nhật UI tức thì
                                 await ReloadCaComboBox();
                             }
                             else
@@ -534,7 +630,7 @@ namespace CheckCATool
         }
 
         // Hộp thoại popup lấy input từ người dùng
-        private static string ShowPrompt(string text, string caption)
+        private static string ShowPrompt(string text, string caption, List<string> existingNames, string defaultValue = "")
         {
             System.Windows.Forms.Form prompt = new System.Windows.Forms.Form()
             {
@@ -547,15 +643,35 @@ namespace CheckCATool
                 MinimizeBox = false
             };
             System.Windows.Forms.Label textLabel = new System.Windows.Forms.Label() { Left = 20, Top = 20, Width = 360, Text = text, Font = new Font("Calibri", 11) };
-            System.Windows.Forms.TextBox textBox = new System.Windows.Forms.TextBox() { Left = 20, Top = 50, Width = 340, Font = new Font("Calibri", 11) };
-            System.Windows.Forms.Button confirmation = new System.Windows.Forms.Button() { Text = "Ok", Left = 260, Width = 100, Top = 90, DialogResult = System.Windows.Forms.DialogResult.OK, Font = new Font("Calibri", 11) };
-            confirmation.Click += (sender, e) => { prompt.Close(); };
+            System.Windows.Forms.TextBox textBox = new System.Windows.Forms.TextBox() { Left = 20, Top = 50, Width = 340, Font = new Font("Calibri", 11), Text = defaultValue };
+            System.Windows.Forms.Button confirmation = new System.Windows.Forms.Button() { Text = "Ok", Left = 260, Width = 100, Top = 90, Font = new Font("Calibri", 11) };
+            
+            confirmation.Click += (sender, e) => 
+            {
+                string input = textBox.Text.Trim();
+                if (string.IsNullOrWhiteSpace(input))
+                {
+                    MessageBox.Show("Tên nhà cung cấp CA không được để trống!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return; // Giữ nguyên popup mở để nhập lại
+                }
+
+                string normalizedInput = input.Replace(" ", "_");
+                if (existingNames != null && existingNames.Any(name => name.Replace(" ", "_").Equals(normalizedInput, StringComparison.OrdinalIgnoreCase)))
+                {
+                    MessageBox.Show("Tên nhà cung cấp CA này đã tồn tại trong hệ thống! Vui lòng nhập tên khác.", "Cảnh báo trùng tên", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return; // Giữ nguyên popup mở để nhập lại
+                }
+
+                prompt.DialogResult = System.Windows.Forms.DialogResult.OK;
+                prompt.Close();
+            };
+
             prompt.Controls.Add(textBox);
             prompt.Controls.Add(confirmation);
             prompt.Controls.Add(textLabel);
             prompt.AcceptButton = confirmation;
 
-            return prompt.ShowDialog() == System.Windows.Forms.DialogResult.OK ? textBox.Text : "";
+            return prompt.ShowDialog() == System.Windows.Forms.DialogResult.OK ? textBox.Text.Trim() : "";
         }
 
       

@@ -115,6 +115,20 @@ public class CertificateController {
         }
     }
 
+    // Kiểm tra CA đã tồn tại trong kho lưu trữ chưa
+    @PostMapping("/validate-new-ca")
+    public ResponseEntity<?> validateNewCaCertificate(@RequestParam("file") MultipartFile file) {
+        try {
+            certificateService.validateNewCaCertificate(file);
+            return ResponseEntity.ok("Chứng chỉ CA hợp lệ và chưa tồn tại.");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Lỗi kiểm tra chứng chỉ: " + e.getMessage());
+        }
+    }
+
     // Thêm API này vào trong CertificateController.java
     @PostMapping("/add-new-ca")
     public ResponseEntity<?> addNewCaCertificate(

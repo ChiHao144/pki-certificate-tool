@@ -46,12 +46,25 @@ namespace CheckCATool
         {
             try
             {
+                // Dọn dẹp các tiến trình JavaBackend cũ bị treo từ trước (nếu có) để tránh xung đột cổng 8080
+                foreach (var process in System.Diagnostics.Process.GetProcessesByName("JavaBackend"))
+                {
+                    try
+                    {
+                        process.Kill();
+                        process.WaitForExit(1000); // Chờ tiến trình cũ tắt hẳn
+                    }
+                    catch { }
+                }
+
                 // Khởi động Server Spring Boot ngầm chạy song song
-                //System.Diagnostics.Process startJava = new System.Diagnostics.Process();
-                //startJava.StartInfo.FileName = "JavaBackend.exe";
-                //startJava.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-                //startJava.StartInfo.CreateNoWindow = true;
-                //startJava.Start();
+                System.Diagnostics.Process startJava = new System.Diagnostics.Process();
+                string exePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "JavaBackend.exe");
+                startJava.StartInfo.FileName = exePath;
+                startJava.StartInfo.WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                startJava.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+                startJava.StartInfo.CreateNoWindow = true;
+                startJava.Start();
 
                 // Hiển thị thông báo trạng thái khởi động dịch vụ nền
                 label8.Text = "Đang kết nối và khởi động\nVui lòng đợi...";
@@ -130,6 +143,10 @@ namespace CheckCATool
                 return;
             }
 
+            // Xóa sạch kết quả cũ trước khi thực hiện kiểm tra hoặc chuyển hướng nạp file
+            ClearLabels();
+            txtUserCert.Text = string.Empty;
+
             string selectedFolderName = cbCaTrustStore.SelectedItem.ToString(); // Rút ra chữ "VNPT" chẳng hạn
 
             // Kiểm tra xem CA đã có cấu hình chứng chỉ EndUser chưa
@@ -155,11 +172,9 @@ namespace CheckCATool
                 // Bỏ qua lỗi và để luồng chính xử lý tiếp
             }
 
-            ClearLabels(); // Xóa sạch kết quả cũ của lần test trước đó
             btnCheckCa.Enabled = false;
             label8.Text = "Hệ thống đang xử lý\nVui lòng chờ trong giây lát...";
             label8.ForeColor = Color.Red;
-            txtUserCert.Text =  String.Empty;
 
 
             try
@@ -299,6 +314,7 @@ namespace CheckCATool
             {
                 ofd.Filter = "Certificate Files (*.cer;*.crt)|*.cer;*.crt|All files (*.*)|*.*";
                 ofd.Title = "Chọn file chứng chỉ User mới để đối soát";
+                ofd.RestoreDirectory = true;
 
                 if (ofd.ShowDialog() == DialogResult.OK)
                 {
@@ -427,10 +443,10 @@ namespace CheckCATool
                                         }
                                     }
                                 }
-                                if (dialogResult == DialogResult.No)
-                                {
-                                    ClearLabels();
-                                }
+                                //if (dialogResult == DialogResult.No)
+                                //{
+                                //    ClearLabels();
+                                //}
                             }
                             else
                             {
@@ -459,6 +475,7 @@ namespace CheckCATool
             {
                 ofd.Filter = "Certificate Files (*.cer;*.crt)|*.cer;*.crt|All files (*.*)|*.*";
                 ofd.Title = "Chọn tệp chứng chỉ CA gốc/trung gian mới cần cấu hình";
+                ofd.RestoreDirectory = true;
 
                 if (ofd.ShowDialog() == DialogResult.OK)
                 {

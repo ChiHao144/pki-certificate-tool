@@ -12,10 +12,10 @@ Dưới đây là sơ đồ luồng dữ liệu tương tác thực tế giữa 
 
 ```mermaid
 sequenceDiagram
-    participant Client as "🖥️ C&#35 Desktop Client (WinForms)"
-    participant Backend as "☕ Spring Boot Backend (Port 8080)"
-    participant Local as "💾 Local TrustStore (DataCrlOcsp)"
-    participant CA as "🌐 CA Servers / Responders (Internet)"
+    participant Client as 🖥️ C Sharp Desktop Client (WinForms)
+    participant Backend as ☕ Spring Boot Backend (Port 8080)
+    participant Local as 💾 Local TrustStore (DataCrlOcsp)
+    participant CA as 🌐 CA Servers / Responders (Internet)
 
     Note over Client, Backend: 1. Khởi chạy ứng dụng
     Client->>Backend: Khởi động JavaBackend.exe ngầm

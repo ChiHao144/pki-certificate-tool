@@ -12,7 +12,7 @@ Dưới đây là sơ đồ luồng dữ liệu tương tác thực tế giữa 
 
 ```mermaid
 sequenceDiagram
-    participant Client as "🖥️ C# Desktop Client (WinForms)"
+    participant Client as "🖥️ C&#35 Desktop Client (WinForms)"
     participant Backend as "☕ Spring Boot Backend (Port 8080)"
     participant Local as "💾 Local TrustStore (DataCrlOcsp)"
     participant CA as "🌐 CA Servers / Responders (Internet)"

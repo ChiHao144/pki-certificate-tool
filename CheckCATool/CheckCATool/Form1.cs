@@ -20,6 +20,7 @@ namespace CheckCATool
     public partial class Form1 : Form
     {
         private static readonly HttpClient client = new HttpClient();
+        private List<string> originalCaList = new List<string>();
         public Form1()
         {
             InitializeComponent();
@@ -98,18 +99,10 @@ namespace CheckCATool
                     string jsonResponse = await response.Content.ReadAsStringAsync();
                     List<string> caList = JsonConvert.DeserializeObject<List<string>>(jsonResponse);
 
-                    cbCaTrustStore.Items.Clear();
-                    foreach (var caName in caList)
-                    {
-                        cbCaTrustStore.Items.Add(caName);
-                    }
+                    originalCaList = caList ?? new List<string>();
+                    FilterCaComboBox();
 
-                    if (cbCaTrustStore.Items.Count > 0)
-                    {
-                        cbCaTrustStore.Items.Insert(0, "--Chọn CA--");
-                        cbCaTrustStore.SelectedIndex = 0;
-                    }
-                    else
+                    if (originalCaList.Count == 0)
                     {
                         MessageBox.Show("Thư mục kho lưu trữ TrustStore cục bộ hiện đang trống rỗng!\nVui lòng nạp thêm file CA trước.",
                                         "Thông báo hạ tầng", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -517,15 +510,7 @@ namespace CheckCATool
                         label8.Refresh();
 
                         // Lấy danh sách các CA đã có sẵn trong ComboBox để kiểm tra trùng lặp
-                        List<string> existingCAs = new List<string>();
-                        foreach (var item in cbCaTrustStore.Items)
-                        {
-                            string name = item.ToString();
-                            if (name != "--Chọn CA--")
-                            {
-                                existingCAs.Add(name);
-                            }
-                        }
+                        List<string> existingCAs = new List<string>(originalCaList);
 
                         string defaultCaName = "";
                         try
@@ -630,20 +615,78 @@ namespace CheckCATool
                     string json = await response.Content.ReadAsStringAsync();
                     List<String> caList = JsonConvert.DeserializeObject<List<String>>(json);
 
-                    cbCaTrustStore.Items.Clear();
-                    cbCaTrustStore.Items.Add("--Chọn CA--");
-
-                    foreach (var ca in caList)
-                    {
-                        cbCaTrustStore.Items.Add(ca);
-                    }
-                    cbCaTrustStore.SelectedIndex = 0;
+                    originalCaList = caList ?? new List<string>();
+                    FilterCaComboBox();
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Không thể tự động đồng bộ lại danh sách CA mới: " + ex.Message, "Lỗi đồng bộ UI", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
+        }
+
+        private void FilterCaComboBox()
+        {
+            string filterText = txtSearchCa.Text.Trim();
+            string selectedVal = cbCaTrustStore.SelectedItem?.ToString();
+
+            // Lưu trữ vị trí con trỏ chuột trong ô tìm kiếm tránh bị mất tiêu điểm
+            int selectionStart = txtSearchCa.SelectionStart;
+            int selectionLength = txtSearchCa.SelectionLength;
+
+            cbCaTrustStore.Items.Clear();
+            cbCaTrustStore.Items.Add("--Chọn CA--");
+
+            var filtered = originalCaList;
+            if (!string.IsNullOrEmpty(filterText))
+            {
+                filtered = originalCaList.Where(ca => ca.IndexOf(filterText, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+            }
+
+            foreach (var ca in filtered)
+            {
+                cbCaTrustStore.Items.Add(ca);
+            }
+
+            if (cbCaTrustStore.Items.Count > 1)
+            {
+                if (selectedVal != null && cbCaTrustStore.Items.Contains(selectedVal))
+                {
+                    cbCaTrustStore.SelectedItem = selectedVal;
+                }
+                else
+                {
+                    cbCaTrustStore.SelectedIndex = 0;
+                }
+            }
+            else
+            {
+                cbCaTrustStore.SelectedIndex = 0;
+            }
+
+            // Nếu người dùng đang thực hiện gõ tìm kiếm, tự động xổ danh sách ComboBox ra để chọn trực tiếp
+            if (txtSearchCa.Focused)
+            {
+                if (cbCaTrustStore.Items.Count > 1 && !string.IsNullOrEmpty(filterText))
+                {
+                    cbCaTrustStore.DroppedDown = true;
+                }
+                else
+                {
+                    cbCaTrustStore.DroppedDown = false;
+                }
+
+                // Trả lại tiêu điểm và con trỏ chuột về đúng vị trí cũ trong TextBox tìm kiếm
+                txtSearchCa.Focus();
+                txtSearchCa.SelectionStart = selectionStart;
+                txtSearchCa.SelectionLength = selectionLength;
+                Cursor.Current = Cursors.Default;
+            }
+        }
+
+        private void txtSearchCa_TextChanged(object sender, EventArgs e)
+        {
+            FilterCaComboBox();
         }
 
         // Hộp thoại popup lấy input từ người dùng

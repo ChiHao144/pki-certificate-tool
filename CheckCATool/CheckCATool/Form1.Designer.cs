@@ -1,4 +1,4 @@
-﻿namespace CheckCATool
+namespace CheckCATool
 {
     partial class Form1
     {
@@ -44,12 +44,14 @@
             this.btnAddUserCert = new System.Windows.Forms.Button();
             this.btnAddCaNew = new System.Windows.Forms.Button();
             this.txtUserCert = new System.Windows.Forms.TextBox();
+            this.lblSearchCa = new System.Windows.Forms.Label();
+            this.txtSearchCa = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
             // btnCheckCa
             // 
             this.btnCheckCa.Font = new System.Drawing.Font("Calibri", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnCheckCa.Location = new System.Drawing.Point(767, 36);
+            this.btnCheckCa.Location = new System.Drawing.Point(838, 66);
             this.btnCheckCa.Name = "btnCheckCa";
             this.btnCheckCa.Size = new System.Drawing.Size(239, 40);
             this.btnCheckCa.TabIndex = 0;
@@ -61,7 +63,7 @@
             // 
             this.label1.AutoSize = true;
             this.label1.Font = new System.Drawing.Font("Calibri", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.Location = new System.Drawing.Point(221, 46);
+            this.label1.Location = new System.Drawing.Point(155, 76);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(169, 24);
             this.label1.TabIndex = 2;
@@ -71,7 +73,7 @@
             // 
             this.label2.AutoSize = true;
             this.label2.Font = new System.Drawing.Font("Calibri", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label2.Location = new System.Drawing.Point(191, 192);
+            this.label2.Location = new System.Drawing.Point(164, 219);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(61, 24);
             this.label2.TabIndex = 3;
@@ -82,9 +84,9 @@
             // label3
             // 
             this.label3.Font = new System.Drawing.Font("Calibri", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label3.Location = new System.Drawing.Point(191, 220);
+            this.label3.Location = new System.Drawing.Point(164, 247);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(983, 50);
+            this.label3.Size = new System.Drawing.Size(913, 50);
             this.label3.TabIndex = 4;
             this.label3.Text = "label3";
             this.label3.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -94,7 +96,7 @@
             // 
             this.label4.AutoSize = true;
             this.label4.Font = new System.Drawing.Font("Calibri", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label4.Location = new System.Drawing.Point(191, 272);
+            this.label4.Location = new System.Drawing.Point(164, 299);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(61, 24);
             this.label4.TabIndex = 5;
@@ -107,10 +109,10 @@
             this.cbCaTrustStore.Font = new System.Drawing.Font("Calibri", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cbCaTrustStore.FormattingEnabled = true;
             this.cbCaTrustStore.IntegralHeight = false;
-            this.cbCaTrustStore.Location = new System.Drawing.Point(428, 39);
+            this.cbCaTrustStore.Location = new System.Drawing.Point(362, 69);
             this.cbCaTrustStore.MaxDropDownItems = 5;
             this.cbCaTrustStore.Name = "cbCaTrustStore";
-            this.cbCaTrustStore.Size = new System.Drawing.Size(296, 32);
+            this.cbCaTrustStore.Size = new System.Drawing.Size(447, 32);
             this.cbCaTrustStore.TabIndex = 6;
             this.cbCaTrustStore.SelectedIndexChanged += new System.EventHandler(this.cbCaTrustStore_SelectedIndexChanged);
             // 
@@ -118,7 +120,7 @@
             // 
             this.label5.AutoSize = true;
             this.label5.Font = new System.Drawing.Font("Calibri", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label5.Location = new System.Drawing.Point(191, 308);
+            this.label5.Location = new System.Drawing.Point(164, 335);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(61, 24);
             this.label5.TabIndex = 7;
@@ -129,7 +131,7 @@
             // 
             this.label6.AutoSize = true;
             this.label6.Font = new System.Drawing.Font("Calibri", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label6.Location = new System.Drawing.Point(191, 346);
+            this.label6.Location = new System.Drawing.Point(164, 373);
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(61, 24);
             this.label6.TabIndex = 8;
@@ -140,7 +142,7 @@
             // 
             this.label7.AutoSize = true;
             this.label7.Font = new System.Drawing.Font("Calibri", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label7.Location = new System.Drawing.Point(191, 382);
+            this.label7.Location = new System.Drawing.Point(164, 409);
             this.label7.Name = "label7";
             this.label7.Size = new System.Drawing.Size(61, 24);
             this.label7.TabIndex = 9;
@@ -151,7 +153,7 @@
             // 
             this.label8.AutoSize = true;
             this.label8.Font = new System.Drawing.Font("Calibri", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label8.Location = new System.Drawing.Point(441, 145);
+            this.label8.Location = new System.Drawing.Point(430, 175);
             this.label8.Name = "label8";
             this.label8.Size = new System.Drawing.Size(61, 24);
             this.label8.TabIndex = 10;
@@ -162,7 +164,7 @@
             // 
             this.label9.AutoSize = true;
             this.label9.Font = new System.Drawing.Font("Calibri", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label9.Location = new System.Drawing.Point(191, 419);
+            this.label9.Location = new System.Drawing.Point(164, 446);
             this.label9.Name = "label9";
             this.label9.Size = new System.Drawing.Size(61, 24);
             this.label9.TabIndex = 11;
@@ -172,7 +174,7 @@
             // 
             this.label10.AutoSize = true;
             this.label10.Font = new System.Drawing.Font("Calibri", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label10.Location = new System.Drawing.Point(191, 460);
+            this.label10.Location = new System.Drawing.Point(164, 487);
             this.label10.Name = "label10";
             this.label10.Size = new System.Drawing.Size(71, 24);
             this.label10.TabIndex = 12;
@@ -182,7 +184,7 @@
             // 
             this.label11.AutoSize = true;
             this.label11.Font = new System.Drawing.Font("Calibri", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label11.Location = new System.Drawing.Point(191, 501);
+            this.label11.Location = new System.Drawing.Point(164, 528);
             this.label11.Name = "label11";
             this.label11.Size = new System.Drawing.Size(71, 24);
             this.label11.TabIndex = 13;
@@ -191,7 +193,7 @@
             // btnAddUserCert
             // 
             this.btnAddUserCert.Font = new System.Drawing.Font("Calibri", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnAddUserCert.Location = new System.Drawing.Point(767, 84);
+            this.btnAddUserCert.Location = new System.Drawing.Point(838, 114);
             this.btnAddUserCert.Name = "btnAddUserCert";
             this.btnAddUserCert.Size = new System.Drawing.Size(239, 40);
             this.btnAddUserCert.TabIndex = 14;
@@ -202,7 +204,7 @@
             // btnAddCaNew
             // 
             this.btnAddCaNew.Font = new System.Drawing.Font("Calibri", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnAddCaNew.Location = new System.Drawing.Point(767, 132);
+            this.btnAddCaNew.Location = new System.Drawing.Point(838, 162);
             this.btnAddCaNew.Name = "btnAddCaNew";
             this.btnAddCaNew.Size = new System.Drawing.Size(239, 40);
             this.btnAddCaNew.TabIndex = 15;
@@ -213,18 +215,39 @@
             // txtUserCert
             // 
             this.txtUserCert.Font = new System.Drawing.Font("Calibri", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.txtUserCert.Location = new System.Drawing.Point(428, 87);
+            this.txtUserCert.Location = new System.Drawing.Point(362, 117);
             this.txtUserCert.Multiline = true;
             this.txtUserCert.Name = "txtUserCert";
             this.txtUserCert.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.txtUserCert.Size = new System.Drawing.Size(296, 35);
+            this.txtUserCert.Size = new System.Drawing.Size(447, 35);
             this.txtUserCert.TabIndex = 16;
+            // 
+            // lblSearchCa
+            // 
+            this.lblSearchCa.AutoSize = true;
+            this.lblSearchCa.Font = new System.Drawing.Font("Calibri", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblSearchCa.Location = new System.Drawing.Point(155, 30);
+            this.lblSearchCa.Name = "lblSearchCa";
+            this.lblSearchCa.Size = new System.Drawing.Size(119, 24);
+            this.lblSearchCa.TabIndex = 17;
+            this.lblSearchCa.Text = "Tìm kiếm CA:";
+            // 
+            // txtSearchCa
+            // 
+            this.txtSearchCa.Font = new System.Drawing.Font("Calibri", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txtSearchCa.Location = new System.Drawing.Point(362, 23);
+            this.txtSearchCa.Name = "txtSearchCa";
+            this.txtSearchCa.Size = new System.Drawing.Size(447, 32);
+            this.txtSearchCa.TabIndex = 18;
+            this.txtSearchCa.TextChanged += new System.EventHandler(this.txtSearchCa_TextChanged);
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1189, 554);
+            this.ClientSize = new System.Drawing.Size(1189, 584);
+            this.Controls.Add(this.lblSearchCa);
+            this.Controls.Add(this.txtSearchCa);
             this.Controls.Add(this.txtUserCert);
             this.Controls.Add(this.btnAddCaNew);
             this.Controls.Add(this.btnAddUserCert);
@@ -269,6 +292,8 @@
         private System.Windows.Forms.Button btnAddUserCert;
         private System.Windows.Forms.Button btnAddCaNew;
         private System.Windows.Forms.TextBox txtUserCert;
+        private System.Windows.Forms.Label lblSearchCa;
+        private System.Windows.Forms.TextBox txtSearchCa;
     }
 }
 
